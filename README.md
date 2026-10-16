@@ -5,14 +5,11 @@ App de cartes à collectionner façon WikiMasters/Pokémon TCG Pocket, sur le th
 ## Déploiement sur Vercel
 
 1. Va sur [vercel.com/new](https://vercel.com/new) et importe ce repo GitHub.
-2. Avant de déployer (ou juste après, dans **Settings → Environment Variables**), ajoute :
-   - `SPOTIFY_CLIENT_ID`
-   - `SPOTIFY_CLIENT_SECRET`
+2. Déploie — aucune configuration nécessaire. Vercel détecte automatiquement `index.html`
+   (statique) et `api/bandimage.js` (fonction serverless).
 
-   (les identifiants de ton app sur [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard))
-3. Déploie. Vercel détecte automatiquement `index.html` (statique) et `api/spotify.js` (fonction serverless).
-
-Aucune autre config nécessaire — pas de build step, pas de framework.
+Pas de clé API, pas de compte développeur, pas de variable d'environnement à configurer :
+les images viennent de Wikipedia/Wikimedia, dont les endpoints sont publics.
 
 ## Développement local
 
@@ -21,9 +18,14 @@ npm i -g vercel
 vercel dev
 ```
 
-Crée un fichier `.env.local` (non commité) à partir de `.env.example` avec tes identifiants Spotify.
-
 ## Structure
 
 - `index.html` — l'app complète (une seule page, HTML/CSS/JS)
-- `api/spotify.js` — fonction serverless qui interroge l'API Spotify (Client Credentials) et retourne la photo d'artiste ; garde le secret côté serveur
+- `api/bandimage.js` — fonction serverless qui cherche la page Wikipedia d'un groupe (FR puis
+  EN en repli) et retourne son image d'infobox (photo ou logo selon la page)
+
+## Notes sur les images
+
+Les images viennent de l'infobox Wikipedia de chaque groupe, qui est le plus souvent la photo
+ou le logo officiel utilisé sur la page. Le statut de licence exact de chaque image est visible
+sur sa page Wikimedia Commons (lien généralement accessible depuis la page Wikipedia du groupe).

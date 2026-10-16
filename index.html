@@ -1064,44 +1064,43 @@ body::after {
     ultra_rare: "Ultra Rare", legendaire: "Légendaire"
   };
 
-  // ---- Photos d'artiste via Spotify (proxy Cloudflare Worker dédié) ----
-  // Le Client ID/Secret Spotify restent côté serveur (fonction Vercel /api/spotify, variables
-  // d'environnement) ; cette app n'appelle jamais Spotify directement, seulement cette route
-  // relative sur le même domaine. Résultats mis en cache en localStorage (7 jours) pour ne pas
-  // re-frapper l'API à chaque ouverture. Spotify ne fournit que des photos d'artiste (pas de logo
-  // vectoriel de groupe) : card.logo reste donc généré (cf. genBandLogo plus haut), seule
-  // card.photo est remplacée par le vrai visuel quand Spotify en trouve un.
-  var SPOTIFY_PROXY = "/api/spotify";
-  var SPOTIFY_CACHE_KEY = "grimoire-spotify-cache-v1";
-  var SPOTIFY_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 jours
+  // ---- Photos de groupe via Wikipedia/Wikimedia (fonction Vercel /api/bandimage) ----
+  // Pas de clé API à protéger : les endpoints Wikipedia sont publics, on passe par une route
+  // serveur surtout pour éviter les soucis CORS/rate-limit côté navigateur et centraliser la
+  // logique FR->EN de repli. Résultats mis en cache en localStorage (7 jours) pour ne pas
+  // re-frapper l'API à chaque ouverture. card.logo reste généré (cf. genBandLogo plus haut) :
+  // l'image Wikipedia remplace surtout card.photo (photo ou logo d'infobox selon la page).
+  var BANDIMAGE_PROXY = "/api/bandimage";
+  var BANDIMAGE_CACHE_KEY = "grimoire-bandimage-cache-v1";
+  var BANDIMAGE_CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 jours
 
-  function loadSpotifyCache() {
+  function loadBandImageCache() {
     try {
-      var raw = localStorage.getItem(SPOTIFY_CACHE_KEY);
+      var raw = localStorage.getItem(BANDIMAGE_CACHE_KEY);
       return raw ? JSON.parse(raw) : {};
     } catch (e) { return {}; }
   }
-  function saveSpotifyCache(cache) {
-    try { localStorage.setItem(SPOTIFY_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
+  function saveBandImageCache(cache) {
+    try { localStorage.setItem(BANDIMAGE_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
   }
 
-  function fetchSpotifyPhoto(card) {
-    var cache = loadSpotifyCache();
+  function fetchBandImage(card) {
+    var cache = loadBandImageCache();
     var entry = cache[card.id];
     var now = Date.now();
-    if (entry && (now - entry.ts) < SPOTIFY_CACHE_TTL) {
+    if (entry && (now - entry.ts) < BANDIMAGE_CACHE_TTL) {
       return Promise.resolve(entry.image || null);
     }
-    return fetch(SPOTIFY_PROXY + "?artist=" + encodeURIComponent(card.name))
+    return fetch(BANDIMAGE_PROXY + "?band=" + encodeURIComponent(card.name))
       .then(function (res) { return res.ok ? res.json() : null; })
       .then(function (data) {
         var image = data && data.image ? data.image : null;
         cache[card.id] = { image: image, ts: now };
-        saveSpotifyCache(cache);
+        saveBandImageCache(cache);
         return image;
       })
       .catch(function () {
-        // reseau indisponible / worker injoignable : on retombe silencieusement sur le fallback
+        // reseau indisponible / api injoignable : on retombe silencieusement sur le fallback
         // genere existant, pas d'erreur visible pour l'utilisateur.
         return null;
       });
@@ -1110,15 +1109,15 @@ body::after {
   // precharge en arriere-plan, des le demarrage, les photos manquantes (card.photo absent) ;
   // injecte directement dans CARDS une fois recuperees pour que buildRevealCard (synchrone)
   // les utilise naturellement des la prochaine ouverture de carte, sans etat de chargement a gerer.
-  function preloadSpotifyPhotos() {
+  function preloadBandImages() {
     CARDS.forEach(function (card) {
       if (card.photo) return;
-      fetchSpotifyPhoto(card).then(function (image) {
+      fetchBandImage(card).then(function (image) {
         if (image) card.photo = image;
       });
     });
   }
-  preloadSpotifyPhotos();
+  preloadBandImages();
 
   var ownedIds = loadOwned();
 
