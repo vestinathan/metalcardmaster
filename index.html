@@ -1188,8 +1188,11 @@ body::after {
       el.className = "mini-card" + (owned ? " metallicss" : " locked");
       el.dataset.rarity = c.rarity;
       var initials = c.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("");
+      // meme garde-fou de chargement que sur la reveal-card : une image distante (Wikipedia) peut
+      // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
+      // alors sur les initiales plutot que l'icone "image cassee".
       var artHtml = (owned && c.photo)
-        ? '<img src="' + c.photo + '" alt="" loading="lazy"><div class="mc-art-tint"></div>'
+        ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy"><div class="mc-art-tint"></div>'
         : (owned ? initials : "?");
       var nameHtml = (owned && c.logo)
         ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '">'
@@ -1202,6 +1205,23 @@ body::after {
         '</div>' +
         badgeHtml +
         '<div class="mc-plate">' + nameHtml + '</div>';
+      var artImgEl = el.querySelector(".mc-art-img");
+      if (artImgEl) {
+        artImgEl.addEventListener("error", function () {
+          var artContainer = el.querySelector(".mc-art");
+          if (artContainer) artContainer.innerHTML =
+            initials +
+            '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
+            '<div class="mc-corner bl"></div><div class="mc-corner br"></div>';
+        }, { once: true });
+      }
+      var logoImgElGrid = el.querySelector(".mc-logo");
+      if (logoImgElGrid) {
+        logoImgElGrid.addEventListener("error", function () {
+          var plateEl = el.querySelector(".mc-plate");
+          if (plateEl) plateEl.innerHTML = '<span class="mc-name">' + c.name + '</span>';
+        }, { once: true });
+      }
       gridEl.appendChild(el);
     });
     // La lib metallicss ne scanne ".metallicss" qu'au chargement de la page (DOMContentLoaded) ;
@@ -1393,14 +1413,24 @@ body::after {
     // sans photo reelle : fond genere a partir de la palette du genre (coherent avec le logo
     // genere), au lieu du simple monogramme neutre d'avant.
     var genColors = genreHolo(card.genre);
+    var fallbackPhotoHtml =
+      '<div class="rc-photo-fallback" style="background: radial-gradient(ellipse 80% 70% at 50% 40%, ' +
+      genColors[0] + '33, ' + genColors[1] + '); color: ' + genColors[0] + ';">' +
+      card.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("") + '</div>';
+    // une URL distante (Wikipedia) peut echouer au chargement cote navigateur meme si l'API a
+    // bien repondu (image retiree depuis, hotlink bloque, etc.) : un handler onerror attache
+    // plus bas (apres l'injection du HTML) bascule alors sur le meme fallback genere plutot que
+    // de laisser l'icone "image cassee" du navigateur. Pas de onerror inline en attribut HTML ici
+    // (fragile a echapper avec des guillemets/apostrophes dans les donnees) : on utilise un
+    // addEventListener classique une fois l'element attache au DOM.
     var photoHtml = card.photo
-      ? '<img src="' + card.photo + '" alt=""><div class="rc-photo-tint"></div>'
-      : '<div class="rc-photo-fallback" style="background: radial-gradient(ellipse 80% 70% at 50% 40%, ' +
-        genColors[0] + '33, ' + genColors[1] + '); color: ' + genColors[0] + ';">' +
-        card.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("") + '</div>';
+      ? '<img class="rc-photo-img" src="' + card.photo + '" alt=""><div class="rc-photo-tint"></div>'
+      : fallbackPhotoHtml;
     // le logo du groupe (reel ou genere) s'affiche dans le header, a la place du nom en texte,
-    // avec la pastille de rarete a sa gauche.
+    // avec la pastille de rarete a sa gauche. meme garde-fou : si card.logo (reel) echoue au
+    // chargement, on bascule sur le logo genere plutot que l'icone cassee (cf. plus bas).
     var logoSrc = card.logo || genBandLogo(card);
+    var generatedLogoSrc = genBandLogo(card);
     var headIdHtml = '<img class="rc-head-logo" src="' + logoSrc + '" alt="' + card.name + '">';
     // relief metallicss sur la pastille de rarete, sauf commune (pas de texture pour le palier le plus bas)
     var rarityLabelClass = card.rarity === "commune" ? "rc-rarity-label" : "rc-rarity-label metallicss";
@@ -1439,6 +1469,26 @@ body::after {
         '<div class="rc-atk"><span class="rc-atk-lbl">ATK</span><span class="rc-atk-num">' + Math.round(card.influence / 5) + '</span></div>' +
       '</div>' +
       '</div>';
+
+    // garde-fou de chargement : une image distante (card.photo via Wikipedia, ou un card.logo
+    // reel futur) peut echouer cote navigateur meme apres une reponse API correcte (image
+    // retiree depuis, hotlink bloque, etc.). On bascule alors sur le fallback genere plutot que
+    // de laisser l'icone "image cassee" du navigateur visible sur la carte.
+    var photoImgEl = el.querySelector(".rc-photo-img");
+    if (photoImgEl) {
+      photoImgEl.addEventListener("error", function () {
+        var photoContainer = el.querySelector(".rc-photo");
+        if (photoContainer) photoContainer.innerHTML = fallbackPhotoHtml;
+      }, { once: true });
+    }
+    if (card.logo) {
+      var logoImgEl = el.querySelector(".rc-head-logo");
+      if (logoImgEl) {
+        logoImgEl.addEventListener("error", function () {
+          logoImgEl.src = generatedLogoSrc;
+        }, { once: true });
+      }
+    }
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
     function applyTilt(dx, dy) {
