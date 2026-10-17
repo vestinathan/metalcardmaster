@@ -1836,62 +1836,95 @@ body::after {
 
   // ---- Grid render ----
   var gridEl = document.getElementById("grid");
+
+  // Remplit un slot .mini-card avec son vrai contenu (image, logo, relief metallicss). Appelé
+  // seulement quand le slot entre dans le viewport (cf. IntersectionObserver plus bas) : avec
+  // 235 cartes, chaque carte "metallicss" génère son propre filtre SVG + MutationObserver +
+  // ResizeObserver (cf. initMetallicss plus bas dans le fichier), ce qui, multiplié par 235
+  // d'un coup, faisait planter Safari mobile en scrollant (mémoire/GPU). On ne paie donc ce
+  // coût que pour les cartes réellement visibles à un instant donné.
+  function populateMiniCard(el, c) {
+    if (el.dataset.populated) return;
+    el.dataset.populated = "1";
+    var owned = ownedIds.indexOf(c.id) !== -1;
+    el.className = "mini-card" + (owned ? " metallicss" : " locked");
+    var initials = c.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("");
+    // meme garde-fou de chargement que sur la reveal-card : une image distante (Wikipedia) peut
+    // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
+    // alors sur les initiales plutot que l'icone "image cassee".
+    var artHtml = (owned && c.photo)
+      ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy" decoding="async"><div class="mc-art-tint"></div>'
+      : (owned ? initials : "?");
+    var nameHtml = (owned && c.logo)
+      ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '" loading="lazy" decoding="async">'
+      : '<span class="mc-name">' + (owned ? c.name : "???") + '</span>';
+    var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
+    el.innerHTML =
+      '<div class="mc-art">' + artHtml +
+        '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
+        '<div class="mc-corner bl"></div><div class="mc-corner br"></div>' +
+      '</div>' +
+      badgeHtml +
+      '<div class="mc-plate">' + nameHtml + '</div>';
+    var artImgEl = el.querySelector(".mc-art-img");
+    if (artImgEl) {
+      artImgEl.addEventListener("error", function () {
+        var artContainer = el.querySelector(".mc-art");
+        if (artContainer) artContainer.innerHTML =
+          initials +
+          '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
+          '<div class="mc-corner bl"></div><div class="mc-corner br"></div>';
+      }, { once: true });
+    }
+    var logoImgElGrid = el.querySelector(".mc-logo");
+    if (logoImgElGrid) {
+      logoImgElGrid.addEventListener("error", function () {
+        var plateEl = el.querySelector(".mc-plate");
+        if (plateEl) plateEl.innerHTML = '<span class="mc-name">' + c.name + '</span>';
+      }, { once: true });
+    }
+    // La lib metallicss ne scanne ".metallicss" qu'au chargement de la page (DOMContentLoaded) ;
+    // elle ne détecte pas les éléments créés/peuplés dynamiquement ensuite. On l'appelle donc
+    // nous-mêmes sur cette carte précise, si elle a bien chargé (cf. script en fin de fichier).
+    if (window.applyMetallicss) {
+      el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+    }
+  }
+
+  var gridObserver = (typeof IntersectionObserver !== "undefined")
+    ? new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            populateMiniCard(entry.target, entry.target._card);
+          }
+        });
+      }, { root: null, rootMargin: "800px 0px", threshold: 0 })
+    : null;
+
   function renderGrid() {
+    if (gridObserver) gridObserver.disconnect();
     gridEl.innerHTML = "";
     var list = CARDS.filter(function (c) {
       if (activeFilter === "Tous") return true;
       return c.rarity === rarityKeyByLabel[activeFilter];
     });
     list.forEach(function (c) {
-      var owned = ownedIds.indexOf(c.id) !== -1;
+      // slot vide au départ (pas d'image, pas de relief metallicss, pas d'observers) : seule sa
+      // taille (aspect-ratio en CSS) compte pour que le scroll ait tout de suite la bonne
+      // hauteur. Le vrai contenu n'est injecté que quand le slot approche du viewport.
       var el = document.createElement("div");
-      // relief metallicss réservé aux cartes possédées : une silhouette grisée/verrouillée
-      // n'a pas vocation à briller.
-      el.className = "mini-card" + (owned ? " metallicss" : " locked");
+      el.className = "mini-card mini-card-slot";
       el.dataset.rarity = c.rarity;
-      var initials = c.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("");
-      // meme garde-fou de chargement que sur la reveal-card : une image distante (Wikipedia) peut
-      // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
-      // alors sur les initiales plutot que l'icone "image cassee".
-      var artHtml = (owned && c.photo)
-        ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy" decoding="async"><div class="mc-art-tint"></div>'
-        : (owned ? initials : "?");
-      var nameHtml = (owned && c.logo)
-        ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '" loading="lazy" decoding="async">'
-        : '<span class="mc-name">' + (owned ? c.name : "???") + '</span>';
-      var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
-      el.innerHTML =
-        '<div class="mc-art">' + artHtml +
-          '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
-          '<div class="mc-corner bl"></div><div class="mc-corner br"></div>' +
-        '</div>' +
-        badgeHtml +
-        '<div class="mc-plate">' + nameHtml + '</div>';
-      var artImgEl = el.querySelector(".mc-art-img");
-      if (artImgEl) {
-        artImgEl.addEventListener("error", function () {
-          var artContainer = el.querySelector(".mc-art");
-          if (artContainer) artContainer.innerHTML =
-            initials +
-            '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
-            '<div class="mc-corner bl"></div><div class="mc-corner br"></div>';
-        }, { once: true });
-      }
-      var logoImgElGrid = el.querySelector(".mc-logo");
-      if (logoImgElGrid) {
-        logoImgElGrid.addEventListener("error", function () {
-          var plateEl = el.querySelector(".mc-plate");
-          if (plateEl) plateEl.innerHTML = '<span class="mc-name">' + c.name + '</span>';
-        }, { once: true });
-      }
+      el._card = c;
       gridEl.appendChild(el);
+      if (gridObserver) {
+        gridObserver.observe(el);
+      } else {
+        // pas d'IntersectionObserver disponible (très vieux navigateur) : on retombe sur
+        // l'ancien comportement, tout peuplé d'un coup.
+        populateMiniCard(el, c);
+      }
     });
-    // La lib metallicss ne scanne ".metallicss" qu'au chargement de la page (DOMContentLoaded) ;
-    // elle ne détecte pas les éléments créés dynamiquement ensuite. On l'appelle donc nous-mêmes
-    // sur chaque carte fraîchement rendue, si elle a bien chargé (cf. script en fin de fichier).
-    if (window.applyMetallicss) {
-      gridEl.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
-    }
   }
 
   renderGrid();
