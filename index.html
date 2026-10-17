@@ -1854,10 +1854,10 @@ body::after {
       // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
       // alors sur les initiales plutot que l'icone "image cassee".
       var artHtml = (owned && c.photo)
-        ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy"><div class="mc-art-tint"></div>'
+        ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy" decoding="async"><div class="mc-art-tint"></div>'
         : (owned ? initials : "?");
       var nameHtml = (owned && c.logo)
-        ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '">'
+        ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '" loading="lazy" decoding="async">'
         : '<span class="mc-name">' + (owned ? c.name : "???") + '</span>';
       var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
       el.innerHTML =
@@ -2086,14 +2086,14 @@ body::after {
     // (fragile a echapper avec des guillemets/apostrophes dans les donnees) : on utilise un
     // addEventListener classique une fois l'element attache au DOM.
     var photoHtml = card.photo
-      ? '<img class="rc-photo-img" src="' + card.photo + '" alt=""><div class="rc-photo-tint"></div>'
+      ? '<img class="rc-photo-img" src="' + card.photo + '" alt="" decoding="async"><div class="rc-photo-tint"></div>'
       : fallbackPhotoHtml;
     // le logo du groupe (reel ou genere) s'affiche dans le header, a la place du nom en texte,
     // avec la pastille de rarete a sa gauche. meme garde-fou : si card.logo (reel) echoue au
     // chargement, on bascule sur le logo genere plutot que l'icone cassee (cf. plus bas).
     var logoSrc = card.logo || genBandLogo(card);
     var generatedLogoSrc = genBandLogo(card);
-    var headIdHtml = '<img class="rc-head-logo" src="' + logoSrc + '" alt="' + card.name + '">';
+    var headIdHtml = '<img class="rc-head-logo" src="' + logoSrc + '" alt="' + card.name + '" decoding="async">';
     // relief metallicss sur la pastille de rarete, sauf commune (pas de texture pour le palier le plus bas)
     var rarityLabelClass = card.rarity === "commune" ? "rc-rarity-label" : "rc-rarity-label metallicss";
     // cadre epais en metal (meme logique que .mini-card) : .rc-frame porte desormais le relief
