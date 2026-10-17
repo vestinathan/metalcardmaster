@@ -359,76 +359,114 @@ body::after {
 .tab-btn .tab-icon { font-size: 19px; line-height: 1; }
 .tab-btn.active { color: var(--accent); }
 
-/* ---------- Pack shelf — tuiles pleine-largeur façon TCG Pocket ---------- */
-.pack-shelf { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
-.pack-tile {
-  border-radius: 20px;
-  position: relative; overflow: hidden;
-  border: 1px solid var(--line-bright);
-  box-shadow: 0 16px 36px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
-  min-height: 190px;
-  display: flex; flex-direction: column; justify-content: flex-end;
+/* ---------- Booster shelf — boosters debout illustrés façon TCG Pocket ---------- */
+.booster-shelf {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 22px; margin-top: 8px; padding: 10px 0 20px;
+}
+.booster-slot { flex: none; width: min(40vw, 165px); }
+.booster {
+  width: 100%;
+  aspect-ratio: 0.58;
+  position: relative;
   cursor: pointer;
+  border: none; padding: 0; background: none; font: inherit; color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s ease;
 }
-.pack-tile.locked { cursor: default; }
-/* fond illustré simulé par un dégradé "alliage" pleine tuile, propre à chaque édition */
-.pack-tile .pt-bg {
-  position: absolute; inset: 0; z-index: 0;
+.booster:active { transform: scale(0.97); }
+.booster.locked { cursor: default; }
+.booster.locked:active { transform: none; }
+
+/* corps de la pochette : forme galbée, légère bordure façon découpe laser, finition alliage */
+.booster-body {
+  position: absolute; inset: 0;
+  border-radius: 10px 10px 16px 16px;
+  overflow: hidden;
+  box-shadow:
+    0 22px 40px -18px rgba(0,0,0,0.75),
+    inset 0 0 0 1px rgba(255,255,255,0.08);
 }
-.pack-tile[data-edition="legend"] .pt-bg {
+.booster[data-edition="legend"] .booster-body {
   background:
-    radial-gradient(ellipse 90% 70% at 70% 0%, color-mix(in srgb, var(--alloy-legend-a) 55%, transparent), transparent 60%),
-    linear-gradient(165deg, color-mix(in srgb, var(--alloy-legend-b) 55%, var(--surface)), var(--surface) 75%);
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent), transparent 55%),
+    linear-gradient(175deg, color-mix(in srgb, var(--alloy-legend-b) 50%, var(--surface)) 0%, var(--surface) 55%, #0c0a08 100%);
 }
-.pack-tile[data-edition="silver"] .pt-bg {
+.booster[data-edition="silver"] .booster-body {
   background:
-    radial-gradient(ellipse 90% 70% at 70% 0%, color-mix(in srgb, var(--alloy-super-a) 45%, transparent), transparent 60%),
-    linear-gradient(165deg, color-mix(in srgb, var(--alloy-super-b) 45%, var(--surface)), var(--surface) 75%);
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--alloy-super-a) 45%, transparent), transparent 55%),
+    linear-gradient(175deg, color-mix(in srgb, var(--alloy-super-b) 40%, var(--surface)) 0%, var(--surface) 55%, #0c0a08 100%);
 }
-/* grain papier + léger éclat façon affiche imprimée, plus de stries métal */
-.pack-tile .pt-brushed {
-  position: absolute; inset: 0; z-index: 1;
-  opacity: 0.5;
-  mix-blend-mode: overlay;
+.booster.locked .booster-body { filter: grayscale(0.9) brightness(0.5); }
+
+/* grain papier, cohérent avec le reste de l'app */
+.booster-body::before {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  opacity: 0.45; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.pack-tile .pt-glow {
-  position: absolute; inset: -30%; z-index: 1;
-  background: radial-gradient(ellipse 60% 50% at 75% 10%, rgba(255,180,100,0.18), transparent 60%);
-  opacity: 0.8;
+/* reflet diagonal glossy, comme un vrai emballage plastifié */
+.booster-body::after {
+  content: ""; position: absolute; z-index: 3; inset: -20%;
+  background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.22) 48%, rgba(255,255,255,0.05) 54%, transparent 65%);
+  pointer-events: none;
 }
-.pack-tile.locked .pt-bg { filter: grayscale(0.85) brightness(0.55); }
-.pack-tile.locked .pt-glow { display: none; }
+.booster.locked .booster-body::after { display: none; }
 
-.pt-content {
-  position: relative; z-index: 2;
-  padding: 18px 20px;
-  background: linear-gradient(0deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.3) 70%, transparent 100%);
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+/* bandeau de découpe en haut — ligne pointillée façon pochette à déchirer, lisible même fermé */
+.booster-tear {
+  position: absolute; top: 14%; left: 8%; right: 8%; z-index: 4;
+  height: 1px;
+  background-image: repeating-linear-gradient(90deg, rgba(249,234,211,0.55) 0 5px, transparent 5px 11px);
 }
-.pt-text { min-width: 0; }
-.pt-edition-label {
-  font-family: var(--font-label); font-size: 12px; color: var(--accent);
-  text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;
+.booster-tear::before, .booster-tear::after {
+  content: ""; position: absolute; top: -3px; width: 7px; height: 7px;
+  border-radius: 50%; background: rgba(249,234,211,0.55);
 }
-.pt-title {
-  font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 0.98;
-  text-transform: uppercase; letter-spacing: 0.01em; color: var(--ink); text-wrap: balance;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+.booster-tear::before { left: -3px; }
+.booster-tear::after { right: -3px; }
+.booster.locked .booster-tear { display: none; }
+
+/* illustration centrale : monogramme géant de l'édition sur fond dégradé, logo de marque en pied */
+.booster-art {
+  position: absolute; inset: 14% 0 30% 0; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
 }
-.pt-desc { font-family: var(--font-label); font-size: 13px; color: rgba(249,234,211,0.7); margin-top: 5px; letter-spacing: 0.01em; }
-.pack-open-btn {
-  font-family: var(--font-metal); font-size: 16px; text-transform: uppercase; letter-spacing: 0.02em; font-weight: 400;
-  background: var(--accent);
-  color: var(--ink-on-accent); border: none; border-radius: 3px;
-  padding: 11px 16px; cursor: pointer; flex: none;
-  box-shadow: 0 6px 14px -6px rgba(0,0,0,0.5);
-  /* relief metallicss : CTA principal de l'app, finition cuivre/or selon disponibilité du pack */
-  --convexity: 2; --metal: copper;
+.booster-art-mark {
+  font-family: var(--font-metal); font-weight: 400;
+  font-size: clamp(42px, 13vw, 60px); line-height: 1;
+  color: rgba(5,4,3,0.4); text-shadow: 0 1px 0 rgba(255,255,255,0.12);
+  letter-spacing: -0.02em;
 }
-.pack-open-btn:disabled {
-  background: var(--line); color: var(--ink-dim); cursor: default; box-shadow: none;
-  --metal: lead; --convexity: 1;
+.booster-brand {
+  position: absolute; left: 0; right: 0; bottom: 8%; z-index: 4;
+  text-align: center;
+  font-family: var(--font-label); font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: rgba(249,234,211,0.65);
+}
+.booster-edition {
+  position: absolute; left: 0; right: 0; bottom: 16%; z-index: 4;
+  text-align: center;
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(15px, 4.2vw, 19px); line-height: 1;
+  text-transform: uppercase; letter-spacing: 0.01em; color: var(--ink);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.65);
+  padding: 0 6%;
+}
+.booster.locked .booster-edition, .booster.locked .booster-brand { color: rgba(249,234,211,0.45); }
+
+/* pastille statut sous le booster (dispo / verrouillé) */
+.booster-status {
+  margin-top: 10px; text-align: center;
+  font-family: var(--font-label); font-size: 11px; letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.booster.locked .booster-status { color: var(--ink-dim); }
+.booster-lock-icon {
+  position: absolute; top: 10px; right: 10px; z-index: 5;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(5,4,3,0.55); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: rgba(249,234,211,0.75);
 }
 
 /* ==========================================================================
@@ -464,55 +502,81 @@ body::after {
   perspective: 1000px;
 }
 
-/* paquet fermé — pochette métallisée scellée */
+/* paquet fermé — pochette métallisée scellée, même habillage que les boosters de l'étagère */
 .pack-closed {
   position: absolute; inset: 0;
-  border-radius: 10px;
+  border-radius: 10px 10px 16px 16px;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 50% at 70% 10%, rgba(255,150,80,0.16), transparent 60%),
-    linear-gradient(155deg, var(--surface-raised) 0%, var(--surface) 60%, #0e0d0b 100%);
-  border: 2px solid var(--accent);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 24px 56px -16px rgba(0,0,0,0.8), inset 0 1px 0 rgba(249,234,211,0.08);
-  transition: transform .15s ease;
-}
-.pack-closed:active { transform: scale(0.97); }
-.pack-closed .pc-mark {
-  font-family: var(--font-label); font-weight: 400; font-size: 15px; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--ink); text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent), transparent 55%),
+    linear-gradient(175deg, color-mix(in srgb, var(--alloy-legend-b) 50%, var(--surface)) 0%, var(--surface) 55%, #0c0a08 100%);
+  box-shadow: 0 24px 56px -16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 .pack-closed[hidden] { display: none; }
-
-/* ligne de déchirure au centre du paquet */
-.pack-closed .pc-tear-line {
-  position: absolute; left: 10%; right: 10%; top: 50%; height: 2px;
-  background: repeating-linear-gradient(90deg, rgba(249,234,211,0.3) 0 4px, transparent 4px 8px);
-  transform: translateY(-50%);
+.pack-closed::before {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  opacity: 0.45; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.pc-mark {
+  position: absolute; left: 0; right: 0; bottom: 14%; z-index: 2; text-align: center;
+  font-family: var(--font-label); font-weight: 400; font-size: 13px; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(249,234,211,0.75); text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+  transition: opacity .2s ease;
 }
 
-/* animation de déchirure : deux moitiés qui s'écartent + flash lumineux */
-.pack-closed.tearing { pointer-events: none; }
+/* bande de découpe : zone à saisir, suit le doigt horizontalement pour arracher le haut du
+   paquet — même grammaire visuelle que .booster-tear sur l'étagère. */
+.pc-tear-zone {
+  position: absolute; left: 0; right: 0; top: 14%; z-index: 4;
+  height: 56px; margin-top: -28px;
+  display: flex; align-items: center; justify-content: center;
+  touch-action: none; cursor: grab;
+}
+.pc-tear-zone:active { cursor: grabbing; }
+.pc-tear-line {
+  position: absolute; left: 8%; right: 8%; height: 1px;
+  background-image: repeating-linear-gradient(90deg, rgba(249,234,211,0.6) 0 5px, transparent 5px 11px);
+}
+.pc-tear-line::before, .pc-tear-line::after {
+  content: ""; position: absolute; top: -3px; width: 7px; height: 7px;
+  border-radius: 50%; background: rgba(249,234,211,0.6);
+}
+.pc-tear-line::before { left: -3px; }
+.pc-tear-line::after { right: -3px; }
+.pc-tear-hint {
+  position: absolute; top: 12px; left: 0; right: 0; text-align: center;
+  font-family: var(--font-label); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: rgba(249,234,211,0.5);
+}
+
+/* les deux moitiés, découpées au niveau de la ligne de déchirure ; le haut suit le drag */
 .pc-half {
-  position: absolute; left: 0; right: 0; height: 52%;
+  position: absolute; left: 0; right: 0; height: 50%;
   overflow: hidden;
   background: inherit;
-  border: 2px solid var(--accent);
 }
-.pc-half.pc-top { top: 0; border-radius: 20px 20px 0 0; border-bottom: none; }
-.pc-half.pc-bottom { bottom: 0; border-radius: 0 0 20px 20px; border-top: none; }
-.pack-closed.tearing .pc-top {
-  animation: tearUp .55s cubic-bezier(.4,0,.2,1) forwards;
+.pc-half.pc-top {
+  top: 0; border-radius: 10px 10px 0 0;
+  transform-origin: 50% 0%;
 }
-.pack-closed.tearing .pc-bottom {
-  animation: tearDown .55s cubic-bezier(.4,0,.2,1) forwards;
+.pc-half.pc-bottom { bottom: 0; border-radius: 0 0 16px 16px; }
+.pc-half .pack-closed-fill { position: absolute; inset: 0; }
+.pc-half.pc-top .pack-closed-fill { top: auto; bottom: 0; height: 200%; }
+.pc-half.pc-bottom .pack-closed-fill { top: 0; height: 200%; }
+
+.pack-closed.tearing-done .pc-top {
+  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .4s ease;
+  transform: translate(140%, -60%) rotate(-22deg); opacity: 0;
 }
-@keyframes tearUp {
-  to { transform: translateY(-120%) rotate(-8deg); opacity: 0; }
+.pack-closed.tearing-done .pc-bottom {
+  transition: transform .3s ease .08s, opacity .3s ease .08s;
+  transform: translateY(30%); opacity: 0;
 }
-@keyframes tearDown {
-  to { transform: translateY(120%) rotate(7deg); opacity: 0; }
+.pack-closed.snapping .pc-top {
+  transition: transform .32s cubic-bezier(.2,.9,.25,1.3);
 }
+
 .tear-flash {
   position: absolute; inset: -20%; z-index: 5;
   background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,255,255,0) 65%);
@@ -908,8 +972,8 @@ body::after {
 .close-opening[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal-card, .pack-closed { transition: none; }
-  .pack-closed.tearing .pc-top, .pack-closed.tearing .pc-bottom { animation: none; opacity: 0; }
+  .reveal-card { transition: none; }
+  .pack-closed.tearing-done .pc-top, .pack-closed.tearing-done .pc-bottom { transition: none; opacity: 0; }
   .tear-flash.flashing { animation: none; }
   .reveal-card[data-rarity="legendaire"] .rc-frame,
   .reveal-card[data-rarity="legendaire"] .rc-frame::after,
@@ -935,32 +999,28 @@ body::after {
 
   <!-- ===== VUE PAQUETS ===== -->
   <main class="view" id="view-packs" hidden>
-    <div class="pack-shelf">
-      <div class="pack-tile" data-edition="legend">
-        <div class="pt-bg"></div>
-        <div class="pt-brushed"></div>
-        <div class="pt-glow"></div>
-        <div class="pt-content">
-          <div class="pt-text">
-            <div class="pt-edition-label">Édition</div>
-            <div class="pt-title">Black Metal</div>
-            <div class="pt-desc">5 cartes · groupes &amp; légendes nordiques</div>
+    <div class="booster-shelf">
+      <div class="booster-slot">
+        <button class="booster metallicss" data-edition="legend" data-pack="daily">
+          <div class="booster-body">
+            <div class="booster-tear"></div>
+            <div class="booster-art"><span class="booster-art-mark">⛧</span></div>
+            <div class="booster-edition">Black Metal</div>
+            <div class="booster-brand">Metal Card Master</div>
           </div>
-          <button class="pack-open-btn metallicss" data-pack="daily">Ouvrir</button>
-        </div>
+        </button>
+        <div class="booster-status">5 cartes · disponible</div>
       </div>
-      <div class="pack-tile locked" data-edition="silver">
-        <div class="pt-bg"></div>
-        <div class="pt-brushed"></div>
-        <div class="pt-glow"></div>
-        <div class="pt-content">
-          <div class="pt-text">
-            <div class="pt-edition-label">Édition</div>
-            <div class="pt-title">Death Metal</div>
-            <div class="pt-desc">5 cartes · prochain paquet dans 18h</div>
+      <div class="booster-slot">
+        <button class="booster locked" data-edition="silver" disabled>
+          <div class="booster-body">
+            <div class="booster-art"><span class="booster-art-mark">☠</span></div>
+            <div class="booster-edition">Death Metal</div>
+            <div class="booster-brand">Metal Card Master</div>
           </div>
-          <button class="pack-open-btn" disabled>Verrouillé</button>
-        </div>
+          <div class="booster-lock-icon">🔒</div>
+        </button>
+        <div class="booster-status">Dans 18h</div>
       </div>
     </div>
   </main>
@@ -975,8 +1035,11 @@ body::after {
 <section class="opening" id="opening" hidden>
   <div class="stage" id="stage">
     <div class="pack-closed" id="packClosed">
-      <div class="pc-mark">Toucher pour ouvrir</div>
-      <div class="pc-tear-line"></div>
+      <div class="pc-mark">Glisser pour déchirer</div>
+      <div class="pc-tear-zone" id="pcTearZone">
+        <div class="pc-tear-hint">↔</div>
+        <div class="pc-tear-line"></div>
+      </div>
     </div>
     <div class="tear-flash" id="tearFlash"></div>
     <!-- reveal-cards injectées en JS -->
@@ -2007,7 +2070,7 @@ body::after {
     return pulled;
   }
 
-  document.querySelectorAll(".pack-open-btn").forEach(function (btn) {
+  document.querySelectorAll(".booster").forEach(function (btn) {
     btn.addEventListener("click", function () {
       if (btn.disabled) return;
       startOpening();
@@ -2019,8 +2082,14 @@ body::after {
     pullIndex = -1;
     opening.hidden = false;
     packClosed.hidden = false;
-    packClosed.classList.remove("tearing");
-    packClosed.innerHTML = '<div class="pc-mark">Toucher pour ouvrir</div><div class="pc-tear-line"></div>';
+    packClosed.classList.remove("tearing-done", "snapping");
+    packClosed.innerHTML =
+      '<div class="pc-mark">Glisser pour déchirer</div>' +
+      '<div class="pc-tear-zone" id="pcTearZone">' +
+        '<div class="pc-tear-hint">↔</div>' +
+        '<div class="pc-tear-line"></div>' +
+      '</div>';
+    initTearGesture();
     tapHint.hidden = true;
     closeBtn.hidden = true;
     progressEl.hidden = false;
@@ -2034,22 +2103,83 @@ body::after {
     revealEls = [];
   }
 
-  packClosed.addEventListener("click", function () {
-    tearPack();
-  });
+  // ---- Geste de déchirure : glisser horizontalement sur la bande pointillée pour décoller le
+  // haut du booster, comme sur Pokémon TCG Pocket. Le haut suit le doigt en continu (translation
+  // + légère rotation + fondu) ; au-delà d'un seuil de progression, l'ouverture se termine
+  // automatiquement, sinon le haut revient se recoller ("snap back"). ----
+  var TEAR_THRESHOLD = 0.55; // fraction de la largeur du paquet à parcourir pour déclencher l'ouverture
+  var tearDragging = false, tearStartX = 0, tearPackTop = null, tearWidth = 1;
 
-  function tearPack() {
-    // construit les deux moitiés déchirées à partir du rendu actuel du paquet scellé
+  function initTearGesture() {
+    var zone = document.getElementById("pcTearZone");
+    if (!zone) return;
+    zone.addEventListener("pointerdown", onTearStart);
+  }
+
+  function onTearStart(e) {
+    if (tearDragging) return;
+    tearDragging = true;
+    tearStartX = e.clientX;
+    tearWidth = packClosed.getBoundingClientRect().width || 1;
+    packClosed.classList.remove("snapping");
+
+    // construit les deux moitiés au moment du premier contact, pour que le drag les anime
     var topHalf = document.createElement("div");
     topHalf.className = "pc-half pc-top";
     var bottomHalf = document.createElement("div");
     bottomHalf.className = "pc-half pc-bottom";
     packClosed.innerHTML = "";
-    packClosed.appendChild(topHalf);
     packClosed.appendChild(bottomHalf);
-    packClosed.classList.add("tearing");
-    tearFlash.classList.add("flashing");
+    packClosed.appendChild(topHalf);
+    tearPackTop = topHalf;
 
+    try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (err) {}
+    window.addEventListener("pointermove", onTearMove);
+    window.addEventListener("pointerup", onTearEnd);
+    window.addEventListener("pointercancel", onTearEnd);
+  }
+
+  function onTearMove(e) {
+    if (!tearDragging || !tearPackTop) return;
+    var dx = e.clientX - tearStartX;
+    var dir = dx >= 0 ? 1 : -1;
+    var progress = Math.min(1, Math.abs(dx) / (tearWidth * TEAR_THRESHOLD));
+    var slide = dx; // le haut suit le doigt 1:1, dans les deux sens
+    var lift = progress * 26; // se soulève légèrement en se décollant
+    var rotate = dir * progress * 14;
+    var fade = 1 - progress * 0.7;
+    tearPackTop.style.transform = "translate(" + slide + "px, " + (-lift) + "px) rotate(" + rotate + "deg)";
+    tearPackTop.style.opacity = String(fade);
+    tearPackTop.dataset.progress = String(progress);
+  }
+
+  function onTearEnd() {
+    if (!tearDragging) return;
+    tearDragging = false;
+    window.removeEventListener("pointermove", onTearMove);
+    window.removeEventListener("pointerup", onTearEnd);
+    window.removeEventListener("pointercancel", onTearEnd);
+    var progress = tearPackTop ? parseFloat(tearPackTop.dataset.progress || "0") : 0;
+    if (progress >= 1) {
+      finishTear();
+    } else if (tearPackTop) {
+      // pas assez loin : le haut revient se recoller à sa place
+      packClosed.classList.add("snapping");
+      tearPackTop.style.transform = "translate(0px, 0px) rotate(0deg)";
+      tearPackTop.style.opacity = "1";
+    }
+  }
+
+  function finishTear() {
+    // retire le style inline posé pendant le drag : la classe tearing-done prend le relais avec
+    // sa propre transition CSS (.4s) vers la position finale, en partant visuellement de là où
+    // le doigt l'a lâché (le navigateur interpole depuis le style calculé actuel).
+    if (tearPackTop) {
+      tearPackTop.style.transform = "";
+      tearPackTop.style.opacity = "";
+    }
+    packClosed.classList.add("tearing-done");
+    tearFlash.classList.add("flashing");
     setTimeout(function () {
       packClosed.hidden = true;
       tearFlash.classList.remove("flashing");
