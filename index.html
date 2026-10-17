@@ -685,7 +685,7 @@ body::after {
 }
 
 /* photo réelle — contraste net, désaturée, pas de vignette colorée : juste un dégradé noir pour lire le texte */
-.rc-photo { position: relative; z-index: 0; flex: none; height: 40%; overflow: hidden; background: var(--bg-raised, #0f0d0b); }
+.rc-photo { position: relative; z-index: 0; flex: none; height: 44%; overflow: hidden; background: var(--bg-raised, #0f0d0b); }
 .rc-photo img {
   position: absolute; inset: 0;
   width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
@@ -795,10 +795,10 @@ body::after {
    header) ; les deux sur une seule ligne, séparés par une puce. */
 .rc-move-top {
   position: relative; z-index: 3; flex: none;
-  padding: 14px 14px 7px;
-  margin-top: -20px;
-  background: linear-gradient(0deg, rgba(5,4,3,0.97) 40%, rgba(5,4,3,0.55) 75%, transparent 100%);
-  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  padding: 8px 14px 5px;
+  margin-top: 0;
+  background: rgba(5,4,3,0.97);
+  display: flex; flex-direction: column; gap: 1px; min-width: 0;
 }
 .rc-move-band {
   display: block; min-width: 0;
@@ -823,10 +823,10 @@ body::after {
    le contenu s'affiche en entier, sans barre de défilement ni troncature. */
 /* padding-bottom réservé à la pastille ATK ancrée en bas à droite de la fenêtre (cf. .rc-atk),
    pour que la dernière ligne du bloc (attaque bonus) ne passe jamais dessous. */
-.rc-moves { position: relative; z-index: 3; flex: 1; display: flex; flex-direction: column; background: rgba(5,4,3,0.97); padding: 9px 14px 32px; min-height: 0; overflow: visible; }
+.rc-moves { position: relative; z-index: 3; flex: 1; display: flex; flex-direction: column; background: rgba(5,4,3,0.97); padding: 6px 14px 36px; min-height: 0; overflow: visible; }
 .rc-move {
   flex: none;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 /* bio brève — en tête du bloc central, texte libre sur fond identique, jamais tronquée */
 .rc-bio {
