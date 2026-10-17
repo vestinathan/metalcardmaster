@@ -444,6 +444,19 @@ body::after {
 }
 .opening[hidden] { display: none; }
 
+/* vue agrandie d'une carte depuis la collection : meme habillage plein ecran que l'ouverture de
+   pack (fond, centrage, taille de carte), sans la sequence de paquet/dechirement. */
+.card-zoom {
+  position: fixed; inset: 0; z-index: 100;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 15%, rgba(237,32,46,0.14), transparent 60%),
+    radial-gradient(circle at 50% 100%, #15110d, #090807 75%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px));
+}
+.card-zoom[hidden] { display: none; }
+.card-zoom .stage { width: min(78vw, 300px); aspect-ratio: 5/7; perspective: 1000px; }
+
 .stage {
   position: relative;
   width: min(78vw, 300px);
@@ -971,6 +984,12 @@ body::after {
   <div class="tap-hint" id="tapHint" hidden>Glisser pour faire pivoter · toucher pour continuer</div>
   <div class="opening-progress" id="openingProgress" hidden></div>
   <button class="close-opening" id="closeOpening" hidden>Retour à l'album</button>
+</section>
+
+<!-- ===== VUE AGRANDIE DEPUIS LA COLLECTION ===== -->
+<section class="card-zoom" id="cardZoom" hidden>
+  <div class="stage" id="cardZoomStage"></div>
+  <button class="close-opening" id="closeCardZoom">Retour à l'album</button>
 </section>
 
 <script>
@@ -1889,7 +1908,41 @@ body::after {
     if (window.applyMetallicss) {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
+    if (owned) {
+      el.addEventListener("click", function () { openCardZoom(c); });
+    }
   }
+
+  // ---- Vue agrandie d'une carte depuis la collection (meme design que l'ouverture de pack,
+  // via buildRevealCard) : clic sur une mini-card possedee -> fiche TCG plein ecran. ----
+  var cardZoom = document.getElementById("cardZoom");
+  var cardZoomStage = document.getElementById("cardZoomStage");
+  var closeCardZoomBtn = document.getElementById("closeCardZoom");
+
+  function openCardZoom(card) {
+    cardZoomStage.innerHTML = "";
+    // onTap no-op : en vue collection il n'y a pas de "carte suivante", un tap/clic ne fait rien
+    // (seul le drag-tilt reste actif) ; la fermeture passe par le bouton ou le fond.
+    var el = buildRevealCard(card, function () {});
+    cardZoomStage.appendChild(el);
+    if (window.applyMetallicss) {
+      el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+    }
+    cardZoom.hidden = false;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.add("showing"); });
+    });
+  }
+
+  function closeCardZoom() {
+    cardZoom.hidden = true;
+    cardZoomStage.innerHTML = "";
+  }
+
+  closeCardZoomBtn.addEventListener("click", closeCardZoom);
+  cardZoom.addEventListener("click", function (e) {
+    if (e.target === cardZoom) closeCardZoom();
+  });
 
   var gridObserver = (typeof IntersectionObserver !== "undefined")
     ? new IntersectionObserver(function (entries) {
@@ -2099,7 +2152,7 @@ body::after {
     img.src = card.logo;
   }
 
-  function buildRevealCard(card) {
+  function buildRevealCard(card, onTap) {
     var el = document.createElement("div");
     el.className = "reveal-card";
     el.dataset.rarity = card.rarity;
@@ -2210,7 +2263,7 @@ body::after {
       var moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
       isDragging = false;
       resetTilt();
-      if (moved < 8) nextCard();
+      if (moved < 8) (onTap || nextCard)();
     });
     el.addEventListener("pointercancel", function () { isDragging = false; resetTilt(); });
 
