@@ -236,57 +236,82 @@ body::after {
 }
 .mini-card.locked { opacity: 0.3; filter: grayscale(0.7); }
 .mini-card.locked::before { display: none; }
-.mini-card .mc-art {
+/* même composition que la reveal-card (.rc-head / .rc-photo / .rc-move-top), à échelle réduite :
+   bandeau haut (badge rareté + logo), photo, bandeau nom juste sous la photo — plutôt qu'un
+   badge ruban flottant et une seule plaque en bas. */
+.mini-card .mc-window {
   position: absolute; inset: 4px;
   border-radius: 9px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--surface-raised);
+}
+.mini-card .mc-head {
+  position: relative; z-index: 3; flex: none;
+  display: flex; align-items: center; gap: 3px;
+  padding: 4px 5px;
+  background: rgba(5,4,3,0.97);
+  border-bottom: 1px solid rgba(249,234,211,0.14);
+  overflow: hidden;
+}
+.mini-card .mc-art {
+  position: relative; flex: 1 1 auto; min-height: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-weight: 700; font-size: 26px; color: rgba(249,234,211,0.14);
+  font-family: var(--font-display); font-weight: 700; font-size: 22px; color: rgba(249,234,211,0.14);
   overflow: hidden;
   background: var(--surface-raised);
 }
 .mini-card .mc-art img {
   position: absolute; inset: 0;
-  width: 100%; height: 100%; object-fit: cover; object-position: center 25%;
-  filter: contrast(1.1) saturate(0.85) brightness(0.9);
-  transform: scale(1.1);
+  width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
+  filter: contrast(1.2) saturate(0.35) brightness(0.9);
 }
-/* vignettage radial — même logique que la reveal-card, en plus compact */
+/* vignettage — même logique que .rc-photo-tint, en plus compact */
 .mini-card .mc-art .mc-art-tint {
   position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 90% 75% at 50% 35%, transparent 30%, rgba(0,0,0,0.5) 75%, rgba(0,0,0,0.92) 100%),
-    linear-gradient(165deg, color-mix(in srgb, var(--accent) 28%, transparent), transparent 45%);
+  background: linear-gradient(0deg, rgba(5,4,3,0.5) 0%, rgba(5,4,3,0) 35%, rgba(5,4,3,0) 100%);
 }
-/* bandeau nom façon "plaque gravée" — toute la largeur, collé en bas, avec filet */
+/* bandeau nom, directement sous la photo — même grammaire que .rc-move-top/.rc-move-band */
 .mini-card .mc-plate {
-  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
-  padding: 7px 8px 8px;
-  background: linear-gradient(0deg, rgba(5,4,3,0.95) 0%, rgba(0,0,0,0.6) 70%, transparent);
-  border-top: 1px solid rgba(249,234,211,0.14);
+  position: relative; z-index: 2; flex: none;
+  padding: 5px 6px 6px;
+  background: rgba(5,4,3,0.97);
 }
 .mini-card .mc-name {
-  font-family: var(--font-label); font-weight: 400; font-size: 12px; line-height: 1.1;
-  text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink);
+  font-family: var(--font-display); font-weight: 400; font-size: 11px; line-height: 1.05;
+  text-transform: uppercase; letter-spacing: 0.005em; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .mini-card .mc-logo {
-  max-height: 20px; max-width: 100%; width: auto; display: block;
+  flex: 1 1 auto; min-width: 0;
+  max-height: 15px; width: auto; display: block;
   object-fit: contain; object-position: left center;
   filter: drop-shadow(0 1px 4px rgba(0,0,0,0.7));
 }
-/* badge de rareté — ruban/flèche, même grammaire que .rc-rarity-label.
-   Relief metallicss par-dessus : --metal par défaut lead, surclassé par rareté ci-dessous. */
+/* badge de rareté — pastille arrondie dans le bandeau haut, même grammaire que .rc-rarity-label.
+   max-width + ellipsis : "Légendaire"/"Ultra Rare" peuvent dépasser la largeur dispo dans un
+   bandeau aussi étroit, surtout à côté d'un logo — on tronque plutôt que déborder du cadre. */
 .mc-rarity-badge {
-  position: absolute; top: 6px; right: -1px; z-index: 3;
-  font-family: var(--font-metal); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 400;
-  padding: 2px 8px 2px 6px; line-height: 1.3;
-  background: var(--accent); color: var(--ink-on-accent);
-  clip-path: polygon(5px 0, 100% 0, 100% 100%, 5px 100%, 0 50%);
-  box-shadow: 0 2px 5px -1px rgba(0,0,0,0.6);
+  flex: 0 1 auto; min-width: 0; max-width: 54%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--font-body); font-size: 5.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.01em;
+  padding: 2px 4px; line-height: 1.3;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--alloy-commune-a) 22%, rgba(5,4,3,0.85));
+  color: var(--alloy-commune-a);
+  border: 1px solid color-mix(in srgb, var(--alloy-commune-a) 55%, transparent);
   --convexity: 2; --metal: lead;
+}
+.mini-card[data-rarity="rare"] .mc-rarity-badge { background: var(--alloy-rare-a); color: var(--ink-on-accent); border-color: var(--alloy-rare-a); --metal: copper; }
+.mini-card[data-rarity="super_rare"] .mc-rarity-badge { background: var(--alloy-super-a); color: #1a1208; border-color: var(--alloy-super-a); --metal: neutral; }
+.mini-card[data-rarity="ultra_rare"] .mc-rarity-badge { background: var(--alloy-ultra-a); color: var(--ink-on-accent); border-color: var(--alloy-ultra-a); --metal: copper; }
+.mini-card[data-rarity="legendaire"] .mc-rarity-badge {
+  background: linear-gradient(90deg, var(--alloy-legend-a), var(--alloy-legend-b));
+  color: #1a1208; border-color: var(--alloy-legend-a); font-style: italic; --metal: gold; --convexity: 4;
 }
 
 /* coins en relief — même logique que .rc-corner, à échelle réduite */
-.mc-corner { position: absolute; width: 16px; height: 16px; z-index: 2; pointer-events: none; }
+.mc-corner { display: none; position: absolute; width: 16px; height: 16px; z-index: 2; pointer-events: none; }
 .mc-corner::before, .mc-corner::after {
   content: ""; position: absolute; background: linear-gradient(90deg, var(--alloy-commune-a), transparent);
   box-shadow: 0 0 3px rgba(0,0,0,0.6);
@@ -316,22 +341,6 @@ body::after {
 .mini-card[data-rarity="super_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--alloy-super-a) 65%, transparent), transparent 72%); opacity: 0.6; }
 .mini-card[data-rarity="ultra_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--alloy-ultra-a) 75%, transparent), transparent 72%); opacity: 0.7; }
 .mini-card[data-rarity="legendaire"]::before { background: radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in srgb, var(--alloy-legend-a) 80%, transparent), transparent 72%); opacity: 0.85; animation: glowPulse 2.2s ease-in-out infinite; }
-
-.mini-card[data-rarity="rare"] .mc-corner::before, .mini-card[data-rarity="rare"] .mc-corner::after { background: linear-gradient(90deg, var(--alloy-rare-a), transparent); }
-.mini-card[data-rarity="super_rare"] .mc-corner::before, .mini-card[data-rarity="super_rare"] .mc-corner::after { background: linear-gradient(90deg, var(--alloy-super-a), transparent); }
-.mini-card[data-rarity="ultra_rare"] .mc-corner::before, .mini-card[data-rarity="ultra_rare"] .mc-corner::after { background: linear-gradient(90deg, var(--alloy-ultra-a), transparent); }
-.mini-card[data-rarity="legendaire"] .mc-corner::before, .mini-card[data-rarity="legendaire"] .mc-corner::after { background: linear-gradient(90deg, var(--alloy-legend-a), transparent); }
-.mini-card[data-rarity="legendaire"] .mc-rarity-badge,
-.mini-card[data-rarity="ultra_rare"] .mc-rarity-badge {
-  background: linear-gradient(90deg, var(--alloy-legend-a), var(--alloy-legend-b));
-  color: #1a1208;
-}
-/* relief metallicss du badge, par rareté */
-.mini-card[data-rarity="commune"] .mc-rarity-badge { --metal: lead; }
-.mini-card[data-rarity="rare"] .mc-rarity-badge { --metal: copper; }
-.mini-card[data-rarity="super_rare"] .mc-rarity-badge { --metal: neutral; }
-.mini-card[data-rarity="ultra_rare"] .mc-rarity-badge,
-.mini-card[data-rarity="legendaire"] .mc-rarity-badge { --metal: gold; }
 
 /* ---------- Bottom tab bar ---------- */
 .tabbar {
@@ -2038,6 +2047,7 @@ body::after {
     el.dataset.populated = "1";
     var owned = ownedIds.indexOf(c.id) !== -1;
     el.className = "mini-card" + (owned ? " metallicss" : " locked");
+    el.dataset.rarity = c.rarity;
     var initials = c.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("");
     // meme garde-fou de chargement que sur la reveal-card : une image distante (Wikipedia) peut
     // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
@@ -2045,32 +2055,28 @@ body::after {
     var artHtml = (owned && c.photo)
       ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy" decoding="async"><div class="mc-art-tint"></div>'
       : (owned ? initials : "?");
-    var nameHtml = (owned && c.logo)
+    // meme composition que le header de la reveal-card : badge de rarete + logo du groupe
+    var logoHtml = (owned && c.logo)
       ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '" loading="lazy" decoding="async">'
-      : '<span class="mc-name">' + (owned ? c.name : "???") + '</span>';
+      : "";
     var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
     el.innerHTML =
-      '<div class="mc-art">' + artHtml +
-        '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
-        '<div class="mc-corner bl"></div><div class="mc-corner br"></div>' +
-      '</div>' +
-      badgeHtml +
-      '<div class="mc-plate">' + nameHtml + '</div>';
+      '<div class="mc-window">' +
+        '<div class="mc-head">' + badgeHtml + logoHtml + '</div>' +
+        '<div class="mc-art">' + artHtml + '</div>' +
+        '<div class="mc-plate"><span class="mc-name">' + (owned ? c.name : "???") + '</span></div>' +
+      '</div>';
     var artImgEl = el.querySelector(".mc-art-img");
     if (artImgEl) {
       artImgEl.addEventListener("error", function () {
         var artContainer = el.querySelector(".mc-art");
-        if (artContainer) artContainer.innerHTML =
-          initials +
-          '<div class="mc-corner tl"></div><div class="mc-corner tr"></div>' +
-          '<div class="mc-corner bl"></div><div class="mc-corner br"></div>';
+        if (artContainer) artContainer.innerHTML = initials;
       }, { once: true });
     }
     var logoImgElGrid = el.querySelector(".mc-logo");
     if (logoImgElGrid) {
       logoImgElGrid.addEventListener("error", function () {
-        var plateEl = el.querySelector(".mc-plate");
-        if (plateEl) plateEl.innerHTML = '<span class="mc-name">' + c.name + '</span>';
+        logoImgElGrid.remove();
       }, { once: true });
     }
     // La lib metallicss ne scanne ".metallicss" qu'au chargement de la page (DOMContentLoaded) ;
