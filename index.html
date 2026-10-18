@@ -1966,9 +1966,46 @@ body::after {
 { id: "turisas", name: "Turisas", genre: "Death Metal", country: "FI", rarity: "commune", influence: 15, views: 3, photo: "images/bands/turisas-photo.jpg", logo: "images/bands/turisas-logo.png", 
   founded: 1997, hit: { title: "Battle Metal", year: 2004 },
   bio: "Groupe finlandais au folk metal théâtral à thématique viking, connu pour ses costumes de bataille." },
-{ id: "eluveitie", name: "Eluveitie", genre: "Death Metal", country: "CH", rarity: "commune", influence: 20, views: 7, photo: "images/bands/eluveitie-photo.jpg", logo: "images/bands/eluveitie-logo.png", 
+{ id: "eluveitie", name: "Eluveitie", genre: "Death Metal", country: "CH", rarity: "commune", influence: 20, views: 7, photo: "images/bands/eluveitie-photo.jpg", logo: "images/bands/eluveitie-logo.png",
   founded: 2002, hit: { title: "Inis Mona", year: 2008 },
-  bio: "Groupe suisse au folk/melodic death metal inspiré de la culture celtique." }
+  bio: "Groupe suisse au folk/melodic death metal inspiré de la culture celtique." },
+
+  // ---- Musiciens : cartes à part entière au même titre que les groupes, puisées dans le même
+  // pool de tirage. Même structure de données que les groupes ci-dessus : "genre" porte ici
+  // l'instrument joué (plutôt qu'un style musical) et "logo" reprend celui du groupe d'origine
+  // (affiché dans le header comme affiliation), sans toucher au rendu existant (buildRevealCard/
+  // populateMiniCard restent inchangés — un champ "type"/"band" informatif est ajouté pour un
+  // usage futur mais n'est lu par aucun code pour l'instant).
+  { id: "musician-hetfield", type: "musician", band: "metallica", name: "James Hetfield", genre: "Chant / Guitare", country: "US", rarity: "legendaire", influence: 92, views: 1900, logo: "images/bands/metallica-logo.png",
+    founded: 1981, hit: { title: "The God That Failed", year: 1991 },
+    bio: "Chanteur et guitariste rythmique, il cofonde Metallica en 1981 à Los Angeles avec Lars Ulrich. Figure centrale du thrash metal depuis plus de 40 ans, toujours membre actif du groupe." },
+  { id: "musician-iommi", type: "musician", band: "blacksabbath", name: "Tony Iommi", genre: "Guitare", country: "GB", rarity: "legendaire", influence: 90, views: 1750, logo: "images/bands/blacksabbath-logo.png",
+    founded: 1968, hit: { title: "Paranoid", year: 1970 },
+    bio: "Guitariste et cofondateur de Black Sabbath, créé en 1968 à Birmingham. Considéré comme l'un des pères du heavy metal, il reste le seul membre permanent du groupe jusqu'à sa dissolution en 2017." },
+  { id: "musician-dickinson", type: "musician", band: "ironmaiden", name: "Bruce Dickinson", genre: "Chant", country: "GB", rarity: "ultra_rare", influence: 85, views: 560, logo: "images/bands/ironmaiden-logo.png",
+    founded: 1981, hit: { title: "Bring Your Daughter... to the Slaughter", year: 1990 },
+    bio: "Chanteur d'Iron Maiden depuis 1981, il quitte le groupe en 1993 pour une carrière solo avant d'y revenir en 1999. Il en reste depuis la voix emblématique." },
+  { id: "musician-araya", type: "musician", band: "slayer", name: "Tom Araya", genre: "Chant / Basse", country: "CL", rarity: "ultra_rare", influence: 76, views: 440, logo: "images/bands/slayer-logo.png",
+    founded: 1981, hit: { title: "Eyes of the Insane", year: 2006 },
+    bio: "Chanteur et bassiste de Slayer depuis 1981, recruté par le guitariste Kerry King. Resté membre du groupe jusqu'à sa dissolution en 2019, avant une brève réunion en 2024." },
+  { id: "musician-nergal", type: "musician", band: "behemoth", name: "Nergal", genre: "Chant / Guitare", country: "PL", rarity: "super_rare", influence: 69, views: 180, logo: "images/bands/behemoth-logo.png",
+    founded: 1991, hit: { title: "Blow Your Trumpets Gabriel", year: 2013 },
+    bio: "De son vrai nom Adam Darski, il fonde Behemoth en 1991 en Pologne à l'adolescence. Chanteur, guitariste et principal compositeur, il a fait évoluer le groupe vers un style black/death hybride." },
+  { id: "musician-shagrath", type: "musician", band: "dimmuborgir", name: "Shagrath", genre: "Chant", country: "NO", rarity: "super_rare", influence: 78, views: 165, logo: "images/bands/dimmuborgir-logo.png",
+    founded: 1993, hit: { title: "Mourning Palace", year: 1997 },
+    bio: "De son vrai nom Stian Thoresen, il fonde Dimmu Borgir en 1993 en Norvège. Chanteur principal et multi-instrumentiste, il reste la figure centrale du groupe à travers tous ses albums." },
+  { id: "musician-csihar", type: "musician", band: "mayhem", name: "Attila Csihar", genre: "Chant", country: "HU", rarity: "rare", influence: 64, views: 66, logo: "images/bands/mayhem-logo.png",
+    founded: 1994, hit: { title: "De Mysteriis Dom Sathanas", year: 1994 },
+    bio: "Chanteur hongrois, il enregistre les voix de l'album culte « De Mysteriis Dom Sathanas » (1994) après la mort de Dead. Il quitte puis réintègre Mayhem en 2004, où il chante depuis." },
+  { id: "musician-ahriman", type: "musician", band: "darkfuneral", name: "Lord Ahriman", genre: "Guitare", country: "SE", rarity: "rare", influence: 50, views: 52, logo: "images/bands/darkfuneral-logo.png",
+    founded: 1993, hit: { title: "Nail Them to the Cross", year: 2015 },
+    bio: "De son vrai nom Mikael Svanberg, il cofonde Dark Funeral en 1993 à Stockholm avec Blackmoon. Guitariste principal et compositeur, il reste le seul membre permanent du groupe depuis sa création." },
+  { id: "musician-waters", type: "musician", band: "annihilator", name: "Jeff Waters", genre: "Guitare", country: "CA", rarity: "commune", influence: 36, views: 26, logo: "images/bands/annihilator-logo.png",
+    founded: 1984, hit: { title: "Annihilator", year: 2005 },
+    bio: "Guitariste, compositeur principal et parfois chanteur/bassiste, il fonde Annihilator en 1984 à Ottawa. Il en reste le seul membre permanent et le moteur créatif depuis plus de 40 ans." },
+  { id: "musician-gezol", type: "musician", band: "sabbatjp", name: "Gezol", genre: "Basse / Chant", country: "JP", rarity: "commune", influence: 25, views: 8, logo: "images/bands/sabbatjp-logo.png",
+    founded: 1984, hit: { title: "Envenom", year: 1991 },
+    bio: "Bassiste et chanteur fondateur de Sabbat, groupe japonais de thrash/black metal formé en 1984 à Kuwana (sous le nom Evil dès 1983). Il en reste le membre central et permanent." }
 
   ];
 
