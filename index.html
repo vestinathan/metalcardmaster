@@ -491,11 +491,16 @@ body::after {
   pointer-events: none;
 }
 .booster-full-art img {
-  width: 100%; height: 100%; object-fit: contain; display: block;
+  width: 100%; height: 100%; object-fit: cover; display: block;
   filter: drop-shadow(0 18px 30px rgba(0,0,0,0.6));
 }
 .booster:has(.booster-full-art) .booster-body::before,
 .booster:has(.booster-full-art) .booster-body::after { display: none; }
+/* l'image plein cadre dessine déjà sa propre silhouette de pochette : la silhouette CSS
+   galbée (clip-path de .booster-body, pensée pour l'habillage procédural) l'écraserait et
+   fausserait ses proportions, donc on la désactive pour ce mode et on laisse le rectangle
+   plein cadre (object-fit: cover ci-dessus) restituer l'image telle quelle. */
+.booster:has(.booster-full-art) .booster-body { clip-path: none; }
 
 /* logo dans la bande chromée du haut — remplace le texte "Metal Card Master" composé en CSS :
    wordmark fourni par l'utilisateur (même asset que .wordmark-img du header, recoloré en
@@ -645,10 +650,13 @@ body::after {
   pointer-events: none;
 }
 .pc-full-art img {
-  width: 100%; height: 100%; object-fit: contain; display: block;
+  width: 100%; height: 100%; object-fit: cover; display: block;
   filter: drop-shadow(0 18px 30px rgba(0,0,0,0.6));
 }
 .pack-closed:has(.pc-full-art)::before { display: none; }
+/* même raison que .booster:has(.booster-full-art) .booster-body plus haut : l'image a déjà
+   sa propre silhouette de pochette, la silhouette CSS galbée la déformerait en plus. */
+.pack-closed:has(.pc-full-art) { clip-path: none; }
 /* meilleur contraste du "Glisser pour déchirer" quand il se superpose à une image plein cadre
    (plutôt qu'au dégradé de rareté uni des autres éditions) */
 .pack-closed:has(.pc-full-art) .pc-mark {
