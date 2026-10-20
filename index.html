@@ -99,47 +99,53 @@ body::after {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
 }
 .dirt-bg::before {
-  /* calque 1 : variation de ton diffuse large — overlay (jamais aussi "montant" que
-     soft-light sur un fond quasi noir) et opacité réduite pour rester discret partout,
-     y compris dans les zones sans contenu au-dessus (vues peu remplies). */
+  /* calque 1 : variation de ton diffuse large — overlay, opacité relevée pour casser le
+     plat et donner un effet mur/béton usé bien visible, même dans les zones sans contenu
+     au-dessus (vues peu remplies). */
   content: "";
   position: absolute; inset: 0;
-  opacity: 0.12;
+  opacity: 0.22;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Cfilter id='dg1'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.01' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.5 0.5 0.5 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg1)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Cfilter id='dg1'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0.8 0.8 0.8 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg1)'/%3E%3C/svg%3E");
   background-size: 700px 700px;
 }
 .dirt-bg::after {
-  /* calque 4 : petites taches/éclaboussures sombres éparses (le réseau de fissures et le
-     micro-grain sont posés séparément par .dirt-cracks/.dirt-cracks2/.dirt-grain ci-dessous,
-     body/skull-bg n'ayant plus de pseudo-élément libre à ce stade du fichier) */
+  /* calque 4 : taches/éclaboussures sombres, nettement plus denses et contrastées
+     (le réseau de fissures et le micro-grain sont posés séparément par
+     .dirt-cracks/.dirt-cracks2/.dirt-cracks3/.dirt-grain ci-dessous). */
   content: "";
   position: absolute; inset: 0;
-  opacity: 0.4;
+  opacity: 0.6;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Cfilter id='dg4'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.09' numOctaves='2' seed='41' stitchTiles='stitch' result='n'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 18 -15.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg4)'/%3E%3C/svg%3E");
-  background-size: 500px 500px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Cfilter id='dg4'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.1' numOctaves='3' seed='41' stitchTiles='stitch' result='n'/%3E%3CfeColorMatrix in='n' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 24 -19.5'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg4)'/%3E%3C/svg%3E");
+  background-size: 460px 460px;
 }
-.dirt-cracks, .dirt-cracks2 {
+.dirt-cracks, .dirt-cracks2, .dirt-cracks3 {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E %3Cg fill='none' stroke='black' stroke-width='1.1' stroke-linecap='round' opacity='0.85'%3E %3Cpath d='M12 8 C 40 30, 55 45, 48 70 S 70 110, 90 118 S 110 150, 95 180 S 60 200, 70 230 S 100 250, 120 270'/%3E %3Cpath d='M48 70 C 60 68, 80 62, 95 75'/%3E %3Cpath d='M90 118 C 70 125, 50 130, 35 150'/%3E %3Cpath d='M150 20 C 170 40, 165 60, 180 80 S 220 95, 230 120 S 210 160, 225 190 S 260 210, 255 240'/%3E %3Cpath d='M180 80 C 195 70, 210 65, 220 50'/%3E %3Cpath d='M230 120 C 245 110, 260 100, 280 105'/%3E %3Cpath d='M300 10 C 310 35, 295 55, 310 80 S 345 100, 335 130 S 300 150, 315 180'/%3E %3Cpath d='M310 80 C 325 85, 345 80, 360 90'/%3E %3Cpath d='M5 250 C 30 260, 45 280, 40 305 S 65 340, 85 345'/%3E %3Cpath d='M40 305 C 25 315, 10 325, 5 340'/%3E %3Cpath d='M120 270 C 135 290, 130 310, 150 330 S 190 345, 195 370'/%3E %3Cpath d='M150 330 C 165 325, 180 315, 195 320'/%3E %3Cpath d='M255 240 C 270 260, 265 280, 280 300 S 320 320, 325 345'/%3E %3Cpath d='M280 300 C 295 295, 310 290, 325 295'/%3E %3Cpath d='M315 180 C 330 195, 350 200, 360 220 S 390 235, 395 255'/%3E %3Cpath d='M195 370 C 220 380, 245 385, 265 395'/%3E %3Cpath d='M85 345 C 105 355, 120 365, 110 385'/%3E %3Cpath d='M335 130 C 350 140, 370 135, 385 145'/%3E %3C/g%3E %3Cg fill='none' stroke='black' stroke-width='0.6' stroke-linecap='round' opacity='0.5'%3E %3Cpath d='M48 70 C 44 90, 48 100, 40 115'/%3E %3Cpath d='M225 190 C 235 205, 230 218, 240 230'/%3E %3Cpath d='M90 118 C 100 130, 98 142, 108 150'/%3E %3Cpath d='M310 80 C 305 95, 312 105, 302 118'/%3E %3Cpath d='M150 330 C 145 340, 152 350, 143 360'/%3E %3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3E %3Cg fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' opacity='0.95'%3E %3Cpath d='M12 8 C 40 30, 55 45, 48 70 S 70 110, 90 118 S 110 150, 95 180 S 60 200, 70 230 S 100 250, 120 270'/%3E %3Cpath d='M48 70 C 60 68, 80 62, 95 75'/%3E %3Cpath d='M90 118 C 70 125, 50 130, 35 150'/%3E %3Cpath d='M150 20 C 170 40, 165 60, 180 80 S 220 95, 230 120 S 210 160, 225 190 S 260 210, 255 240'/%3E %3Cpath d='M180 80 C 195 70, 210 65, 220 50'/%3E %3Cpath d='M230 120 C 245 110, 260 100, 280 105'/%3E %3Cpath d='M300 10 C 310 35, 295 55, 310 80 S 345 100, 335 130 S 300 150, 315 180'/%3E %3Cpath d='M310 80 C 325 85, 345 80, 360 90'/%3E %3Cpath d='M5 250 C 30 260, 45 280, 40 305 S 65 340, 85 345'/%3E %3Cpath d='M40 305 C 25 315, 10 325, 5 340'/%3E %3Cpath d='M120 270 C 135 290, 130 310, 150 330 S 190 345, 195 370'/%3E %3Cpath d='M150 330 C 165 325, 180 315, 195 320'/%3E %3Cpath d='M255 240 C 270 260, 265 280, 280 300 S 320 320, 325 345'/%3E %3Cpath d='M280 300 C 295 295, 310 290, 325 295'/%3E %3Cpath d='M315 180 C 330 195, 350 200, 360 220 S 390 235, 395 255'/%3E %3Cpath d='M195 370 C 220 380, 245 385, 265 395'/%3E %3Cpath d='M85 345 C 105 355, 120 365, 110 385'/%3E %3Cpath d='M335 130 C 350 140, 370 135, 385 145'/%3E %3C/g%3E %3Cg fill='none' stroke='black' stroke-width='0.9' stroke-linecap='round' opacity='0.7'%3E %3Cpath d='M48 70 C 44 90, 48 100, 40 115'/%3E %3Cpath d='M225 190 C 235 205, 230 218, 240 230'/%3E %3Cpath d='M90 118 C 100 130, 98 142, 108 150'/%3E %3Cpath d='M310 80 C 305 95, 312 105, 302 118'/%3E %3Cpath d='M150 330 C 145 340, 152 350, 143 360'/%3E %3Cpath d='M12 8 C 6 20, 10 30, 2 40'/%3E %3Cpath d='M300 10 C 294 22, 298 32, 290 42'/%3E %3Cpath d='M5 340 C 14 348, 24 350, 30 360'/%3E %3Cpath d='M360 220 C 368 228, 378 230, 384 240'/%3E %3C/g%3E%3C/svg%3E");
 }
 .dirt-cracks {
-  opacity: 0.22;
+  opacity: 0.4;
   background-size: 620px 620px;
 }
 .dirt-cracks2 {
-  opacity: 0.13;
+  opacity: 0.26;
   inset: -100px;
   transform: scale(1.6) rotate(37deg);
   background-size: 520px 520px;
 }
+.dirt-cracks3 {
+  opacity: 0.2;
+  inset: -140px;
+  transform: scale(2.1) rotate(-52deg);
+  background-size: 380px 380px;
+}
 .dirt-grain {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  opacity: 0.1;
+  opacity: 0.22;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='dg3'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg3)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='dg3'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23dg3)'/%3E%3C/svg%3E");
   background-size: 140px 140px;
 }
 
@@ -1221,6 +1227,7 @@ body::after {
 <div class="dirt-bg"></div>
 <div class="dirt-cracks"></div>
 <div class="dirt-cracks2"></div>
+<div class="dirt-cracks3"></div>
 <div class="dirt-grain"></div>
 <div class="app">
   <header class="topbar">
