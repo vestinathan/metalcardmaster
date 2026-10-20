@@ -773,60 +773,33 @@ body::after {
    relief métallique de ~11px. .rc-window est nichée à l'intérieur de son padding plutôt que
    superposée en inset:0, pour un vrai cadre et non un simple filet.
    Commune reprend le gabarit classique "carte à collectionner papier" (type Magic) : liseré
-   noir épais extérieur puis bande de couleur unie (ici gris-argent, cohérent avec l'identité
-   neutre/incolore de cette rareté), sans texture ni grain — volontairement sobre. Les raretés
-   rare/super rare/ultra/légendaire gardent le traitement alliage métallique + grain + décor
-   gravé aux coins, inchangé plus bas ; légendaire garde en plus l'holographique. */
+   noir épais extérieur puis bande de couleur unie (gris-argent, cohérent avec l'identité
+   neutre/incolore de cette rareté) — bords parfaitement nets et droits (pas de déformation),
+   mais avec un grain métallique fin + quelques micro-éclats sur le liseré noir (extérieur et
+   intérieur) et, plus discret, sur la bande, pour évoquer une bordure scintillante façon carte
+   à collectionner premium sans tomber dans l'ornemental ni l'abîmé. Les raretés rare/super
+   rare/ultra/légendaire gardent le traitement alliage métallique + grain + décor gravé aux
+   coins, inchangé plus bas ; légendaire garde en plus l'holographique. */
 .rc-frame {
   position: absolute; inset: 0;
   flex: 1;
   display: flex; flex-direction: column;
   padding: 14px;
   border-radius: 16px;
-  background: #0c0b0a;
-  box-shadow: inset 0 0 0 6px var(--alloy-commune-a), inset 0 0 0 7px #0c0b0a, 0 10px 28px -10px rgba(0,0,0,0.7);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' fill='none'%3E%3Cdefs%3E%3Cfilter id='grain' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='6' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.55 0.55 0.55 0 -0.42' result='fineA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='1' seed='19' result='sparse'/%3E%3CfeColorMatrix in='sparse' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0.9 0.9 0 -0.86' result='sparseA'/%3E%3CfeMerge%3E%3CfeMergeNode in='fineA'/%3E%3CfeMergeNode in='sparseA'/%3E%3C/feMerge%3E%3C/filter%3E%3CclipPath id='clipOuterRing'%3E%3Cpath fill-rule='evenodd' d='M0 16 Q0 0 16 0 L284 0 Q300 0 300 16 L300 404 Q300 420 284 420 L16 420 Q0 420 0 404 Z M9 18 Q9 9 18 9 L282 9 Q291 9 291 18 L291 402 Q291 411 282 411 L18 411 Q9 411 9 402 Z'/%3E%3C/clipPath%3E%3CclipPath id='clipBand'%3E%3Crect x='9' y='9' width='282' height='402' rx='13'/%3E%3C/clipPath%3E%3CclipPath id='clipInnerRing'%3E%3Cpath fill-rule='evenodd' d='M22 31 Q22 22 31 22 L269 22 Q278 22 278 31 L278 389 Q278 398 269 398 L31 398 Q22 398 22 389 Z M26.5 33 Q26.5 26.5 33 26.5 L267 26.5 Q273.5 26.5 273.5 33 L273.5 387 Q273.5 393.5 267 393.5 L33 393.5 Q26.5 393.5 26.5 387 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='0' y='0' width='300' height='420' rx='16' fill='%230c0b0a'/%3E%3Cg clip-path='url(%23clipOuterRing)'%3E%3Crect x='0' y='0' width='300' height='420' fill='%234a463e' filter='url(%23grain)' opacity='0.6'/%3E%3C/g%3E%3Crect x='9' y='9' width='282' height='402' rx='13' fill='%23726c60'/%3E%3Cg clip-path='url(%23clipBand)'%3E%3Crect x='9' y='9' width='282' height='402' fill='%234a463e' filter='url(%23grain)' opacity='0.28'/%3E%3C/g%3E%3Crect x='22' y='22' width='256' height='376' rx='9' fill='none' stroke='%230c0b0a' stroke-width='9'/%3E%3Cg clip-path='url(%23clipInnerRing)'%3E%3Crect x='22' y='22' width='256' height='376' fill='%234a463e' filter='url(%23grain)' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  box-shadow: 0 10px 28px -10px rgba(0,0,0,0.7);
 }
-.reveal-card[data-rarity="rare"] .rc-frame {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,0) scale(-1,1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(0,34) scale(1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,34) scale(-1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"),
-    linear-gradient(155deg, #5a1716 0%, #1a0908 35%, #2e0b0a 55%, #1a0908 75%, #5a1716 100%);
-  background-position: left top, right top, left bottom, right bottom, 0 0, 0 0;
-  background-size: 26px 26px, 26px 26px, 26px 26px, 26px 26px, auto, auto;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-blend-mode: normal, normal, normal, normal, overlay, normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 3px rgba(0,0,0,0.6), 0 0 16px -4px rgba(90,23,22,0.55), 0 10px 28px -10px rgba(0,0,0,0.7);
-}
-.reveal-card[data-rarity="super_rare"] .rc-frame {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,0) scale(-1,1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(0,34) scale(1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,34) scale(-1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"),
-    linear-gradient(155deg, #6e1a18 0%, #1f0a09 35%, #350d0b 55%, #1f0a09 75%, #6e1a18 100%);
-  background-position: left top, right top, left bottom, right bottom, 0 0, 0 0;
-  background-size: 26px 26px, 26px 26px, 26px 26px, 26px 26px, auto, auto;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-blend-mode: normal, normal, normal, normal, overlay, normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 3px rgba(0,0,0,0.6), 0 0 16px -4px rgba(110,26,24,0.55), 0 10px 28px -10px rgba(0,0,0,0.7);
-}
+/* Rare / Super Rare / Ultra Rare : même gabarit simple que Commune (liseré noir + bande unie +
+   grain métallique fin, bords nets), partagé via ce sélecteur combiné — seule la teinte de la
+   bande change (rouge foncé uniforme au lieu du gris/argent de Commune, pas de dégradé de
+   couleur entre ces 3 raretés). */
+.reveal-card[data-rarity="rare"] .rc-frame,
+.reveal-card[data-rarity="super_rare"] .rc-frame,
 .reveal-card[data-rarity="ultra_rare"] .rc-frame {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,0) scale(-1,1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(0,34) scale(1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,34) scale(-1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23f2d9b8' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23f2d9b8' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23f2d9b8'/%3E%3C/g%3E%3C/svg%3E"),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"),
-    linear-gradient(155deg, #861f1b 0%, #230b09 35%, #42100c 55%, #230b09 75%, #861f1b 100%);
-  background-position: left top, right top, left bottom, right bottom, 0 0, 0 0;
-  background-size: 26px 26px, 26px 26px, 26px 26px, 26px 26px, auto, auto;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, no-repeat;
-  background-blend-mode: normal, normal, normal, normal, overlay, normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 3px rgba(0,0,0,0.6), 0 0 22px -2px rgba(134,31,27,0.6), 0 10px 28px -10px rgba(0,0,0,0.7);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' fill='none'%3E%3Cdefs%3E%3Cfilter id='grain' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='6' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.55 0.55 0.55 0 -0.42' result='fineA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='1' seed='19' result='sparse'/%3E%3CfeColorMatrix in='sparse' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0.9 0.9 0 -0.86' result='sparseA'/%3E%3CfeMerge%3E%3CfeMergeNode in='fineA'/%3E%3CfeMergeNode in='sparseA'/%3E%3C/feMerge%3E%3C/filter%3E%3CclipPath id='clipOuterRing'%3E%3Cpath fill-rule='evenodd' d='M0 16 Q0 0 16 0 L284 0 Q300 0 300 16 L300 404 Q300 420 284 420 L16 420 Q0 420 0 404 Z M9 18 Q9 9 18 9 L282 9 Q291 9 291 18 L291 402 Q291 411 282 411 L18 411 Q9 411 9 402 Z'/%3E%3C/clipPath%3E%3CclipPath id='clipBand'%3E%3Crect x='9' y='9' width='282' height='402' rx='13'/%3E%3C/clipPath%3E%3CclipPath id='clipInnerRing'%3E%3Cpath fill-rule='evenodd' d='M22 31 Q22 22 31 22 L269 22 Q278 22 278 31 L278 389 Q278 398 269 398 L31 398 Q22 398 22 389 Z M26.5 33 Q26.5 26.5 33 26.5 L267 26.5 Q273.5 26.5 273.5 33 L273.5 387 Q273.5 393.5 267 393.5 L33 393.5 Q26.5 393.5 26.5 387 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='0' y='0' width='300' height='420' rx='16' fill='%230c0b0a'/%3E%3Cg clip-path='url(%23clipOuterRing)'%3E%3Crect x='0' y='0' width='300' height='420' fill='%232e0f0d' filter='url(%23grain)' opacity='0.6'/%3E%3C/g%3E%3Crect x='9' y='9' width='282' height='402' rx='13' fill='%237a2b28'/%3E%3Cg clip-path='url(%23clipBand)'%3E%3Crect x='9' y='9' width='282' height='402' fill='%232e0f0d' filter='url(%23grain)' opacity='0.28'/%3E%3C/g%3E%3Crect x='22' y='22' width='256' height='376' rx='9' fill='none' stroke='%230c0b0a' stroke-width='9'/%3E%3Cg clip-path='url(%23clipInnerRing)'%3E%3Crect x='22' y='22' width='256' height='376' fill='%232e0f0d' filter='url(%23grain)' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  box-shadow: 0 10px 28px -10px rgba(0,0,0,0.7);
 }
 .reveal-card[data-rarity="legendaire"] .rc-frame {
   position: absolute;
