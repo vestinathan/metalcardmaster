@@ -772,26 +772,19 @@ body::after {
 /* cadre — vrai encadrement épais façon carte à collectionner (type Pokémon TCG) : bordure en
    relief métallique de ~11px. .rc-window est nichée à l'intérieur de son padding plutôt que
    superposée en inset:0, pour un vrai cadre et non un simple filet.
-   Pour toutes les raretés sauf Légendaire, le relief metallicss est abandonné au profit d'un
-   cadre plus classique et sobre : dégradé sombre teinté par rareté + léger grain, avec un petit
-   décor ornemental gravé aux 4 coins (dans l'esprit "petit décor discret dans la marge" des
-   cartes à collectionner classiques) — motifs originaux, propres à cette app. Légendaire garde
-   le traitement holographique + metallicss existant, inchangé plus bas. */
+   Commune reprend le gabarit classique "carte à collectionner papier" (type Magic) : liseré
+   noir épais extérieur puis bande de couleur unie (ici gris-argent, cohérent avec l'identité
+   neutre/incolore de cette rareté), sans texture ni grain — volontairement sobre. Les raretés
+   rare/super rare/ultra/légendaire gardent le traitement alliage métallique + grain + décor
+   gravé aux coins, inchangé plus bas ; légendaire garde en plus l'holographique. */
 .rc-frame {
   position: absolute; inset: 0;
   flex: 1;
   display: flex; flex-direction: column;
-  padding: 11px;
-  border-radius: 14px;
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23e7ddc9' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23e7ddc9' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23e7ddc9'/%3E%3C/svg%3E") left top / 26px 26px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,0) scale(-1,1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23e7ddc9' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23e7ddc9' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23e7ddc9'/%3E%3C/g%3E%3C/svg%3E") right top / 26px 26px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(0,34) scale(1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23e7ddc9' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23e7ddc9' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23e7ddc9'/%3E%3C/g%3E%3C/svg%3E") left bottom / 26px 26px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Cg transform='translate(34,34) scale(-1,-1)'%3E%3Cpath d='M3 3 Q3 22 22 22' fill='none' stroke='%23e7ddc9' stroke-width='2.5'/%3E%3Cpath d='M3 3 Q14 3 14 14' fill='none' stroke='%23e7ddc9' stroke-width='1' opacity='0.6'/%3E%3Ccircle cx='3' cy='3' r='3' fill='%23e7ddc9'/%3E%3C/g%3E%3C/svg%3E") right bottom / 26px 26px no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"),
-    linear-gradient(155deg, var(--alloy-commune-a) 0%, #1a1712 35%, var(--alloy-commune-b) 55%, #1a1712 75%, var(--alloy-commune-a) 100%);
-  background-blend-mode: normal, normal, normal, normal, overlay, normal;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 3px rgba(0,0,0,0.6), 0 10px 28px -10px rgba(0,0,0,0.7);
+  padding: 14px;
+  border-radius: 16px;
+  background: #0c0b0a;
+  box-shadow: inset 0 0 0 6px var(--alloy-commune-a), inset 0 0 0 7px #0c0b0a, 0 10px 28px -10px rgba(0,0,0,0.7);
 }
 .reveal-card[data-rarity="rare"] .rc-frame {
   background-image:
