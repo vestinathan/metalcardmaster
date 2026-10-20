@@ -2651,7 +2651,51 @@ body::after {
 
     if (card.rarity === "legendaire") applyLogoHolo(el, card);
 
+    // garde-fou anti-débordement : la bio + l'attaque bonus ne sont jamais tronquées (texte
+    // intégral, pas de scroll — cf. commentaire sur .rc-moves), mais leur hauteur combinée peut
+    // dépasser l'espace réellement disponible sous la photo pour un groupe à bio longue, ce qui
+    // pousse le bloc "attaque bonus" hors de .rc-window (coupé par son overflow:hidden) ou lui
+    // fait chevaucher la pastille ATK ancrée en absolu. Plutôt que de couper le texte, on réduit
+    // progressivement la taille de police de la bio (seule la bio : l'attaque bonus et l'ATK
+    // gardent une taille fixe et lisible) jusqu'à ce que tout rentre, avec un plancher qui reste
+    // lisible. N'a aucun effet sur les cartes dont le contenu tient déjà (immense majorité) :
+    // la boucle sort dès le premier essai si rien ne déborde.
+    requestAnimationFrame(function () { fitCardMoves(el); });
+
     return el;
+  }
+
+  function fitCardMoves(el) {
+    var win = el.querySelector(".rc-window");
+    var bioEl = el.querySelector(".rc-bio");
+    if (!win || !bioEl) return;
+    var lastBlock = el.querySelector(".rc-move-bonus") || bioEl;
+    function overflowPx() {
+      return lastBlock.getBoundingClientRect().bottom - win.getBoundingClientRect().bottom;
+    }
+    // palier 1 : réduire la taille de police de la bio (seule la bio — l'attaque bonus et
+    // l'ATK gardent une taille fixe et lisible), jusqu'à un plancher de lisibilité.
+    var MIN_FONT = 10.5;
+    var size = 12;
+    bioEl.style.fontSize = size + "px";
+    for (var i = 0; i < 12 && overflowPx() > 0 && size > MIN_FONT; i++) {
+      size -= 0.5;
+      bioEl.style.fontSize = size + "px";
+    }
+    // palier 2 : si ça déborde encore au plancher (bio très longue + attaque bonus), resserrer
+    // l'interligne de la bio (gain discret, texte toujours intégralement lisible, juste plus
+    // compact) avant de toucher à quoi que ce soit d'autre.
+    var lineHeight = 1.36;
+    for (var j = 0; j < 8 && overflowPx() > 0 && lineHeight > 1.08; j++) {
+      lineHeight -= 0.04;
+      bioEl.style.lineHeight = lineHeight.toFixed(2);
+    }
+    // palier 3 (dernier recours) : si un résidu subsiste malgré les deux paliers précédents,
+    // resserrer le padding vertical entre bio et attaque bonus plutôt que de laisser déborder.
+    for (var k = 0; k < 6 && overflowPx() > 0; k++) {
+      var cur = parseFloat(getComputedStyle(bioEl).paddingBottom) || 7;
+      bioEl.style.paddingBottom = Math.max(0, cur - 1.5) + "px";
+    }
   }
 
   function updateProgressDots() {
