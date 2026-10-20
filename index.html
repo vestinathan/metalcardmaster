@@ -65,50 +65,11 @@ body {
   position: relative;
 }
 
-/* Illustration crâne unique en fond — gravure plate gris-olive très sombre sur noir, façon affiche
-   (réf. Rocksoul) : pas de tuile, une seule silhouette fixée en haut, fondue dans le noir en dessous. */
+/* Calque de fond uni (l'illustration crâne a été retirée ; la texture "dirt" ci-dessous
+   assure désormais tout le relief visuel du fond). */
 .skull-bg {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background: var(--bg);
-}
-/* Calque 1 : silhouette pleine + dégradé radial interne (simule le volume/éclairage) */
-.skull-bg::before {
-  content: "";
-  position: absolute; inset: 0;
-  background-image:
-    radial-gradient(ellipse 60% 50% at 50% 28%, #3a3528 0%, #262319 55%, #1a1811 100%);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='460' viewBox='0 0 400 460'%3E%3Cg fill='%23fff'%3E%3Cpath d='M200 14c-78 0-130 58-130 130 0 36 13 60 28 85 9 14 12 24 12 39v24c0 16 11 28 27 28h8v36c0 11 9 20 20 20h70c11 0 20-9 20-20v-36h8c16 0 27-12 27-28v-24c0-15 3-25 12-39 15-25 28-49 28-85 0-72-52-130-130-130z'/%3E%3Cellipse cx='160' cy='162' rx='32' ry='38'/%3E%3Cellipse cx='240' cy='162' rx='32' ry='38'/%3E%3Cpath d='M200 198l-20 48h40l-20-48z'/%3E%3Cpath d='M156 260c12 11 27 17 44 17s32-6 44-17'/%3E%3Cpath d='M118 100c-16 10-27 28-27 48M282 100c16 10 27 28 27 48'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(0deg, transparent 0%, black 20%, black 55%, transparent 100%);
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='460' viewBox='0 0 400 460'%3E%3Cg fill='%23fff'%3E%3Cpath d='M200 14c-78 0-130 58-130 130 0 36 13 60 28 85 9 14 12 24 12 39v24c0 16 11 28 27 28h8v36c0 11 9 20 20 20h70c11 0 20-9 20-20v-36h8c16 0 27-12 27-28v-24c0-15 3-25 12-39 15-25 28-49 28-85 0-72-52-130-130-130z'/%3E%3Cellipse cx='160' cy='162' rx='32' ry='38'/%3E%3Cellipse cx='240' cy='162' rx='32' ry='38'/%3E%3Cpath d='M200 198l-20 48h40l-20-48z'/%3E%3Cpath d='M156 260c12 11 27 17 44 17s32-6 44-17'/%3E%3Cpath d='M118 100c-16 10-27 28-27 48M282 100c16 10 27 28 27 48'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(0deg, transparent 0%, black 20%, black 55%, transparent 100%);
-  -webkit-mask-size: 400px 460px, 100% 100%;
-  mask-size: 400px 460px, 100% 100%;
-  -webkit-mask-position: center 0, center 0;
-  mask-position: center 0, center 0;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
-}
-/* Calque 2 : détails gravés — craquelures, ombrage des orbites/arcade, fissures fines, dans la même
-   zone masquée que le crâne, en noir pur pour creuser le relief façon gravure sur bois. */
-.skull-bg::after {
-  content: "";
-  position: absolute; inset: 0;
-  background-color: #0e0c08;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='460' viewBox='0 0 400 460'%3E%3Cg fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3C!-- craquelures crâne --%3E%3Cpath d='M94 110c6 20 2 40-8 58M306 110c-6 20-2 40 8 58M150 70c-4 16-14 26-28 32M250 70c4 16 14 26 28 32M200 40v30M172 220c-6 10-16 16-28 18M228 220c6 10 16 16 28 18'/%3E%3C!-- ombrage interne orbites --%3E%3Cg stroke-width='1.6' opacity='.8'%3E%3Cpath d='M138 148c4 10 4 22 0 32M262 148c-4 10-4 22 0 32'/%3E%3C/g%3E%3C!-- fêlures mâchoire --%3E%3Cpath d='M172 300c-10 6-16 16-16 28M228 300c10 6 16 16 16 28M184 330l-4 20M216 330l4 20'/%3E%3C!-- hachures latérales (ombre portée) --%3E%3Cg stroke-width='1.4' opacity='.6'%3E%3Cpath d='M86 150h14M84 162h16M84 174h14M314 150h-14M316 162h-16M316 174h-14'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(0deg, transparent 0%, black 20%, black 55%, transparent 100%);
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='460' viewBox='0 0 400 460'%3E%3Cg fill='none' stroke='%23fff' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M94 110c6 20 2 40-8 58M306 110c-6 20-2 40 8 58M150 70c-4 16-14 26-28 32M250 70c4 16 14 26 28 32M200 40v30M172 220c-6 10-16 16-28 18M228 220c6 10 16 16 28 18'/%3E%3Cg stroke-width='1.6' opacity='.8'%3E%3Cpath d='M138 148c4 10 4 22 0 32M262 148c-4 10-4 22 0 32'/%3E%3C/g%3E%3Cpath d='M172 300c-10 6-16 16-16 28M228 300c10 6 16 16 16 28M184 330l-4 20M216 330l4 20'/%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(0deg, transparent 0%, black 20%, black 55%, transparent 100%);
-  -webkit-mask-size: 400px 460px, 100% 100%;
-  mask-size: 400px 460px, 100% 100%;
-  -webkit-mask-position: center 0, center 0;
-  mask-position: center 0, center 0;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
-  opacity: 0.55;
 }
 /* Grain papier ambiant — deux fréquences de bruit superposées (fin + large) pour une texture
    plus riche, façon affiche imprimée usée plutôt qu'un bruit uniforme. */
