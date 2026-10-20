@@ -634,23 +634,6 @@ body::after {
   opacity: 0.45; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-/* pendant de .booster-full-art côté pack-closed : même image posée telle quelle, sans aucun
-   habillage CSS. onTearStart vide .pack-closed au premier contact de glissement, donc cet
-   élément disparaît naturellement dès que le geste de déchirure démarre, comme .pc-mark. */
-.pack-closed:has(.pc-full-art) {
-  clip-path: none; box-shadow: none; background: none;
-  aspect-ratio: 0.5667;
-}
-.pack-closed:has(.pc-full-art)::before { display: none; }
-.pc-full-art { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
-.pc-full-art img { width: 100%; height: 100%; display: block; }
-/* meilleur contraste du "Glisser pour déchirer" quand il se superpose à une image plein cadre
-   (plutôt qu'au dégradé de rareté uni des autres éditions) */
-.pack-closed:has(.pc-full-art) .pc-mark {
-  background: rgba(10,8,6,0.55);
-  padding: 4px 10px; border-radius: 999px;
-  width: fit-content; margin: 0 auto;
-}
 /* logo + "5 cartes" + photo + nom d'édition : mêmes proportions que .booster-brand-mark/
    .booster-count/.booster-art/.booster-edition sur l'étagère (même recette, dimensions
    identiques en %). Posés en enfants directs de .pack-closed (pas dans .pc-half) : ils sont
@@ -2374,31 +2357,8 @@ body::after {
     pullQueue = pickPack(sourceBtn && sourceBtn.dataset.pack);
     pullIndex = -1;
     opening.hidden = false;
-    packClosed.hidden = false;
-    packClosed.classList.remove("tearing-done", "snapping");
     var edition = (sourceBtn && sourceBtn.dataset.edition) || "legend";
     packClosed.dataset.edition = edition;
-    var brandImg = sourceBtn ? sourceBtn.querySelector(".booster-brand-mark img") : null;
-    var editionLabel = sourceBtn ? sourceBtn.querySelector(".booster-edition") : null;
-    var countLabel = sourceBtn ? sourceBtn.querySelector(".booster-count") : null;
-    var artImg = sourceBtn ? sourceBtn.querySelector(".booster-art img") : null;
-    // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
-    // prioritaire sur le reste si présent sur le booster source — cf. .booster-full-art.
-    var fullArtImg = sourceBtn ? sourceBtn.querySelector(".booster-full-art img") : null;
-    packClosed.innerHTML =
-      (fullArtImg
-        ? '<div class="pc-full-art"><img src="' + fullArtImg.src + '" alt="' + fullArtImg.alt + '"></div>'
-        : (brandImg ? '<div class="pc-brand-mark"><img src="' + brandImg.src + '" alt="' + brandImg.alt + '"></div>' : "") +
-          (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
-          (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
-          (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "")
-      ) +
-      '<div class="pc-mark">Glisser pour déchirer</div>' +
-      '<div class="pc-tear-zone" id="pcTearZone">' +
-        '<div class="pc-tear-hint">↔</div>' +
-        '<div class="pc-tear-line"></div>' +
-      '</div>';
-    initTearGesture();
     tapHint.hidden = true;
     closeBtn.hidden = true;
     progressEl.hidden = false;
@@ -2410,6 +2370,34 @@ body::after {
     });
     revealEls.forEach(function (el) { el.remove(); });
     revealEls = [];
+
+    // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
+    // pas d'écran "pack fermé" ni de geste de déchirure pour ce mode, le clic ouvre directement
+    // le tirage de cartes — cf. .booster-full-art.
+    var fullArtImg = sourceBtn ? sourceBtn.querySelector(".booster-full-art img") : null;
+    if (fullArtImg) {
+      packClosed.hidden = true;
+      nextCard();
+      return;
+    }
+
+    packClosed.hidden = false;
+    packClosed.classList.remove("tearing-done", "snapping");
+    var brandImg = sourceBtn ? sourceBtn.querySelector(".booster-brand-mark img") : null;
+    var editionLabel = sourceBtn ? sourceBtn.querySelector(".booster-edition") : null;
+    var countLabel = sourceBtn ? sourceBtn.querySelector(".booster-count") : null;
+    var artImg = sourceBtn ? sourceBtn.querySelector(".booster-art img") : null;
+    packClosed.innerHTML =
+      (brandImg ? '<div class="pc-brand-mark"><img src="' + brandImg.src + '" alt="' + brandImg.alt + '"></div>' : "") +
+      (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
+      (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
+      (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "") +
+      '<div class="pc-mark">Glisser pour déchirer</div>' +
+      '<div class="pc-tear-zone" id="pcTearZone">' +
+        '<div class="pc-tear-hint">↔</div>' +
+        '<div class="pc-tear-line"></div>' +
+      '</div>';
+    initTearGesture();
   }
 
   // ---- Geste de déchirure : glisser horizontalement sur la bande pointillée pour décoller le
