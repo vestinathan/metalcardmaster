@@ -244,14 +244,20 @@ body::after {
 }
 
 /* même grammaire que la reveal-card : cadre épais en alliage + glow externe par rareté, à échelle réduite */
+/* Cadre à double liseré noir + bande alliage, même grammaire que .rc-frame/.rc-window sur la
+   reveal-card (juste sans le grain SVG par carte : à 235 cartes dans la grille, un filtre SVG
+   individuel par mini-card coûterait trop cher en mémoire/GPU sur mobile — cf. note sur
+   populateMiniCard plus bas). La structure reste la même : anneau noir extérieur, bande de
+   couleur unie par rareté, anneau noir intérieur, puis la fenêtre de contenu — pour que la
+   carte lise bien comme une version réduite de la reveal-card plutôt qu'un design différent. */
 .mini-card {
   aspect-ratio: 5/7;
   position: relative;
-  padding: 4px;
+  padding: 3px;
   border-radius: 12px;
   cursor: pointer;
-  background: linear-gradient(155deg, var(--alloy-commune-a) 0%, #1a1712 35%, var(--alloy-commune-b) 55%, #1a1712 75%, var(--alloy-commune-a) 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 3px rgba(0,0,0,0.6);
+  background: #0c0b0a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 2px rgba(0,0,0,0.6);
 }
 .mini-card::before {
   content: ""; position: absolute; inset: -8px; z-index: -1; border-radius: 18px;
@@ -261,12 +267,25 @@ body::after {
 }
 .mini-card.locked { opacity: 0.3; filter: grayscale(0.7); }
 .mini-card.locked::before { display: none; }
+/* bande alliage, nichée dans l'anneau noir extérieur (.mini-card) — #726c60 = teinte exacte de
+   la bande "commune" du cadre SVG de la reveal-card (.rc-frame), pour un rendu identique. */
+.mini-card .mc-band {
+  position: absolute; inset: 3px;
+  border-radius: 10px;
+  background: #726c60;
+}
+/* second anneau noir, entre la bande et la fenêtre de contenu */
+.mini-card .mc-inner-ring {
+  position: absolute; inset: 6px;
+  border-radius: 8px;
+  background: #0c0b0a;
+}
 /* même composition que la reveal-card (.rc-head / .rc-photo / .rc-move-top), à échelle réduite :
    bandeau haut (badge rareté + logo), photo, bandeau nom juste sous la photo — plutôt qu'un
    badge ruban flottant et une seule plaque en bas. */
 .mini-card .mc-window {
-  position: absolute; inset: 4px;
-  border-radius: 9px;
+  position: absolute; inset: 8px;
+  border-radius: 6px;
   overflow: hidden;
   display: flex; flex-direction: column;
   background: var(--surface-raised);
@@ -348,11 +367,15 @@ body::after {
 .mc-corner.bl { bottom: 7px; left: 7px; transform: scaleY(-1); }
 .mc-corner.br { bottom: 7px; right: 7px; transform: scale(-1); }
 
-/* rareté : pilote le dégradé du cadre (fallback si metallicss indisponible), le glow externe et les coins */
-.mini-card[data-rarity="rare"] { background: linear-gradient(155deg, var(--alloy-rare-a) 0%, #1a1712 35%, var(--alloy-rare-b) 55%, #1a1712 75%, var(--alloy-rare-a) 100%); }
-.mini-card[data-rarity="super_rare"] { background: linear-gradient(155deg, var(--alloy-super-a) 0%, #1a1712 35%, var(--alloy-super-b) 55%, #1a1712 75%, var(--alloy-super-a) 100%); }
-.mini-card[data-rarity="ultra_rare"] { background: linear-gradient(155deg, var(--alloy-ultra-a) 0%, #1a1712 35%, var(--alloy-ultra-b) 55%, #1a1712 75%, var(--alloy-ultra-a) 100%); }
-.mini-card[data-rarity="legendaire"] { background: linear-gradient(155deg, var(--alloy-legend-a) 0%, #1a1712 30%, var(--alloy-legend-b) 55%, #1a1712 80%, var(--alloy-legend-a) 100%); }
+/* rareté : pilote la couleur de la bande (.mc-band), le glow externe et les coins — mêmes
+   teintes que le cadre SVG de la reveal-card (.rc-frame) : commune en gris/argent, rare/super
+   rare/ultra rare toutes en rouge sombre uniforme, légendaire seule en dégradé couleur-groupe. */
+.mini-card[data-rarity="rare"] .mc-band,
+.mini-card[data-rarity="super_rare"] .mc-band,
+.mini-card[data-rarity="ultra_rare"] .mc-band { background: #7a2b28; }
+.mini-card[data-rarity="legendaire"] .mc-band {
+  background: linear-gradient(155deg, var(--holo-a, var(--alloy-legend-a)) 0%, var(--holo-b, var(--alloy-legend-b)) 100%);
+}
 
 /* relief metallicss sur le cadre (4px visibles autour de .mc-art) : convexité et finition par rareté */
 .mini-card { --convexity: 1; --metal: lead; }
@@ -362,10 +385,10 @@ body::after {
 .mini-card[data-rarity="legendaire"] { --convexity: 4; --metal: gold; }
 .mini-card.locked.metallicss > canvas.metal { display: none; }
 
-.mini-card[data-rarity="rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--alloy-rare-a) 60%, transparent), transparent 72%); opacity: 0.55; }
-.mini-card[data-rarity="super_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--alloy-super-a) 65%, transparent), transparent 72%); opacity: 0.6; }
-.mini-card[data-rarity="ultra_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, var(--alloy-ultra-a) 75%, transparent), transparent 72%); opacity: 0.7; }
-.mini-card[data-rarity="legendaire"]::before { background: radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in srgb, var(--alloy-legend-a) 80%, transparent), transparent 72%); opacity: 0.85; animation: glowPulse 2.2s ease-in-out infinite; }
+.mini-card[data-rarity="rare"]::before,
+.mini-card[data-rarity="super_rare"]::before,
+.mini-card[data-rarity="ultra_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, #7a2b28 70%, transparent), transparent 72%); opacity: 0.6; }
+.mini-card[data-rarity="legendaire"]::before { background: radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in srgb, var(--holo-a, var(--alloy-legend-a)) 80%, transparent), transparent 72%); opacity: 0.85; animation: glowPulse 2.2s ease-in-out infinite; }
 
 /* ---------- Bottom tab bar ---------- */
 /* Pilule de verre flottante, même grammaire que .topbar : détachée des bords et du bas de
@@ -2583,6 +2606,8 @@ body::after {
       : "";
     var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
     el.innerHTML =
+      '<div class="mc-band"></div>' +
+      '<div class="mc-inner-ring"></div>' +
       '<div class="mc-window">' +
         '<div class="mc-head">' + badgeHtml + logoHtml + '</div>' +
         '<div class="mc-art">' + artHtml + '</div>' +
@@ -2607,6 +2632,10 @@ body::after {
     if (window.applyMetallicss) {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
+    // même teinte --holo-a/b/c que sur la reveal-card (cf. applyLogoHolo plus bas) : un petit
+    // échantillonnage canvas 64x64, négligeable même répété sur les ~13 légendaires de la grille,
+    // pour que la bande dorée du mini-card reflète la vraie couleur du groupe comme au tirage.
+    if (owned && c.rarity === "legendaire") applyLogoHolo(el, c);
     if (owned) {
       el.addEventListener("click", function () { openCardZoom(c); });
     }
