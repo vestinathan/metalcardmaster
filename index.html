@@ -1006,11 +1006,11 @@ body::after {
    .reveal-card) reprendre la main sans lutter avec cette keyframe. Le flash lumineux (.rc-flip-
    flash) est un enfant séparé plutôt qu'un pseudo-élément, pour pouvoir le superposer au-dessus
    du cadre (z-index) sans dépendre d'un ::after déjà pris par d'autres raretés. */
-.reveal-card.flipping { animation: cardFlipIn .62s cubic-bezier(.3,.85,.3,1) both; }
+.reveal-card.flipping { animation: cardFlipIn 1.1s cubic-bezier(.25,.8,.3,1) both; }
 @keyframes cardFlipIn {
   0% { opacity: 0; transform: rotateY(-90deg) scale(0.88); }
-  45% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
-  55% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
+  38% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
+  62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
 .rc-flip-flash {
@@ -1021,11 +1021,16 @@ body::after {
   opacity: 0;
   pointer-events: none;
 }
-.reveal-card.flipping .rc-flip-flash { animation: cardFlipFlash .62s cubic-bezier(.3,.85,.3,1) both; }
+/* flash étalé sur une plage large autour du retournement (38%-62% de cardFlipIn, soit ~420-680ms
+   sur 1.1s), avec une montée/descente progressive (pas de pic instantané) pour rester visible à
+   l'œil plutôt qu'un simple sursaut d'un ou deux frames. */
+.reveal-card.flipping .rc-flip-flash { animation: cardFlipFlash 1.1s cubic-bezier(.25,.8,.3,1) both; }
 @keyframes cardFlipFlash {
-  0%, 44% { opacity: 0; }
+  0%, 28% { opacity: 0; }
+  42% { opacity: 0.9; }
   50% { opacity: 1; }
-  70% { opacity: 0; }
+  58% { opacity: 0.9; }
+  78% { opacity: 0; }
   100% { opacity: 0; }
 }
 
