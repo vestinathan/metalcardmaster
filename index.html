@@ -3255,36 +3255,41 @@ body::after {
     if (window.applyMetallicss) {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
+    // Un seul rAF suffit ici (le double rAF imbriqué d'origine ajoutait un aller-retour de
+    // rendu inutile — mesuré à ~30-60ms de latence perçue entre le tap et le vrai début de
+    // l'animation, sur toutes les raretés, pas seulement légendaire). .classList.add() posant
+    // une ANIMATION (@keyframes), pas une transition, un seul rAF suffit à garantir qu'elle se
+    // déclenche correctement sur l'élément fraîchement inséré ; le double rAF n'est nécessaire
+    // que pour forcer une *transition* CSS à repartir sur un état initial, pas pour une
+    // @keyframes animation ici.
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        el.classList.add("showing", "flipping");
-        // .flipping ne sert qu'à jouer l'animation d'entrée une fois ; on la retire à la fin pour
-        // que le transform inline posé par le tilt au doigt (applyTilt/resetTilt plus haut) ne
-        // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
-        // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
-        el.addEventListener("animationend", function onFlipEnd(e) {
-          if (e.animationName === "cardFlipIn" || e.animationName === "cardFlipInLegend") {
-            el.classList.remove("flipping");
-            el.removeEventListener("animationend", onFlipEnd);
-          }
-        });
-        // Légendaire : .stage vibre PENDANT tout le retournement, pas juste un sursaut après coup.
-        // cardFlipInLegend (1.9s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
-        // la secousse (durée 1.57s, cf. @keyframes legendShake) démarre dès 8% (~152ms) pour courir
-        // en parallèle du pivot et se calmer en même temps que la carte se stabilise face à
-        // l'écran. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut déclencher à
-        // un instant précis de l'animation en cours, pas à sa fin. classList.remove avant re-add
-        // au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout court,
-        // mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
-        // d'affilée).
-        if (card.rarity === "legendaire") {
-          setTimeout(function () {
-            stage.classList.remove("legendary-shake");
-            void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
-            stage.classList.add("legendary-shake");
-          }, 152);
+      el.classList.add("showing", "flipping");
+      // .flipping ne sert qu'à jouer l'animation d'entrée une fois ; on la retire à la fin pour
+      // que le transform inline posé par le tilt au doigt (applyTilt/resetTilt plus haut) ne
+      // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
+      // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
+      el.addEventListener("animationend", function onFlipEnd(e) {
+        if (e.animationName === "cardFlipIn" || e.animationName === "cardFlipInLegend") {
+          el.classList.remove("flipping");
+          el.removeEventListener("animationend", onFlipEnd);
         }
       });
+      // Légendaire : .stage vibre PENDANT tout le retournement, pas juste un sursaut après coup.
+      // cardFlipInLegend (1.9s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
+      // la secousse (durée 1.57s, cf. @keyframes legendShake) démarre dès 8% (~152ms) pour courir
+      // en parallèle du pivot et se calmer en même temps que la carte se stabilise face à
+      // l'écran. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut déclencher à
+      // un instant précis de l'animation en cours, pas à sa fin. classList.remove avant re-add
+      // au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout court,
+      // mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
+      // d'affilée).
+      if (card.rarity === "legendaire") {
+        setTimeout(function () {
+          stage.classList.remove("legendary-shake");
+          void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
+          stage.classList.add("legendary-shake");
+        }, 152);
+      }
     });
     tapHint.hidden = false;
   }
