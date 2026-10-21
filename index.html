@@ -1013,17 +1013,15 @@ body::after {
   62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
-/* Légendaire : même geste (apparition de profil -90deg, pivot, pose) mais très étiré (3.2s au
-   lieu de 1.1s). Demande explicite : ce n'est pas la durée totale qui doit se sentir, c'est le
-   RETOURNEMENT lui-même (le passage de -90deg à 0deg) qui doit être long et "vibrant" plutôt
-   qu'un saut rapide noyé dans une timeline par ailleurs étirée (version précédente : tout le
-   pivot tenait dans 48%-78%, soit ~1s sur les 3.2s, avec une seule interpolation continue donc
-   perçue comme un geste rapide malgré l'enveloppe longue). Ici le pivot occupe l'essentiel de la
-   timeline (8%-92%, soit ~2.7s) et traverse plusieurs paliers de rotation (-90 → -55 → -25 → -8 →
-   0) au lieu d'une seule interpolation lissée, pour que l'œil perçoive un vrai tourbillon qui
-   ralentit en approchant de la face, avec un léger overshoot (-4deg) juste avant la pose finale
-   pour accentuer encore la sensation de vibration/rebond sur l'arrivée. */
-.reveal-card[data-rarity="legendaire"].flipping { animation-name: cardFlipInLegend; animation-duration: 3.2s; }
+/* Légendaire : même geste (apparition de profil -90deg, pivot, pose) mais étiré (1.9s au lieu de
+   1.1s standard). Le pivot (passage de -90deg à 0deg) doit être long et "vibrant" plutôt qu'un
+   saut rapide : il occupe l'essentiel de la timeline (8%-92%) et traverse plusieurs paliers de
+   rotation (-90 → -55 → -25 → -8 → 0, avec un léger overshoot -4deg avant la pose finale) au lieu
+   d'une seule interpolation lissée, pour un vrai tourbillon qui ralentit en approchant de la face.
+   3.2s testé puis jugé trop long (bloquait l'enchaînement tap-pour-carte-suivante) : ramené à
+   1.9s, qui garde le ressenti "vibrant" (toutes les proportions ci-dessous et plus bas, flash et
+   secousse, sont en %, donc suivent automatiquement ce changement de durée totale). */
+.reveal-card[data-rarity="legendaire"].flipping { animation-name: cardFlipInLegend; animation-duration: 1.9s; }
 @keyframes cardFlipInLegend {
   0% { opacity: 0; transform: rotateY(-90deg) scale(0.86); }
   8% { opacity: 1; transform: rotateY(-90deg) scale(0.88); }
@@ -1065,7 +1063,7 @@ body::after {
 .reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash {
   background: radial-gradient(ellipse 75% 75% at 50% 50%, color-mix(in srgb, var(--alloy-legend-a) 85%, white) 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent) 55%, transparent 75%);
   animation-name: cardFlipFlashLegend;
-  animation-duration: 3.2s;
+  animation-duration: 1.9s;
 }
 /* recalé sur le nouveau pivot étalé de cardFlipInLegend : la carte est de profil le plus fin vers
    85-91% de la timeline (cf. keyframes ci-dessus), donc le pic du flash est repoussé vers cette
@@ -1084,7 +1082,7 @@ body::after {
    coup, .stage vibre PENDANT tout le retournement — c'est le "vibrant" demandé. Secousse plus fine
    et resserrée (petites oscillations rapides) plutôt qu'un gros aller-retour, pour rester lisible
    sur une durée longue sans donner le mal de mer. */
-.stage.legendary-shake { animation: legendShake 2.65s cubic-bezier(.45,0,.55,1) both; }
+.stage.legendary-shake { animation: legendShake 1.57s cubic-bezier(.45,0,.55,1) both; }
 @keyframes legendShake {
   0% { transform: translate(0, 0) rotate(0deg); }
   4% { transform: translate(-2px, 1px) rotate(-0.4deg); }
@@ -3271,8 +3269,8 @@ body::after {
           }
         });
         // Légendaire : .stage vibre PENDANT tout le retournement, pas juste un sursaut après coup.
-        // cardFlipInLegend (3.2s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
-        // la secousse (durée 2.65s, cf. @keyframes legendShake) démarre dès 8% (~256ms) pour courir
+        // cardFlipInLegend (1.9s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
+        // la secousse (durée 1.57s, cf. @keyframes legendShake) démarre dès 8% (~152ms) pour courir
         // en parallèle du pivot et se calmer en même temps que la carte se stabilise face à
         // l'écran. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut déclencher à
         // un instant précis de l'animation en cours, pas à sa fin. classList.remove avant re-add
@@ -3284,7 +3282,7 @@ body::after {
             stage.classList.remove("legendary-shake");
             void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
             stage.classList.add("legendary-shake");
-          }, 256);
+          }, 152);
         }
       });
     });
