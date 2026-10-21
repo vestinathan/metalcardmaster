@@ -265,6 +265,29 @@ body::after {
    géométries de coin (rayons légèrement différents selon la taille réelle du slot/arrondi). */
 .mini-card:has(.mc-scale) .mc-band,
 .mini-card:has(.mc-scale) .mc-inner-ring { display: none; }
+/* Badge de quantité ("x2", "x3"...) affiché sur les cartes possédées en plusieurs exemplaires —
+   chaque tirage en paquet compte, même pour une carte déjà possédée (voir addOwned/nextCard), donc
+   ce badge est le seul indice visuel de doublon dans la grille Album. Coin haut-droit, par-dessus
+   le cadre mis à l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none
+   et une transform — on le place donc comme enfant direct de .mini-card, pas de .mc-scale). */
+.mini-card .mc-qty-badge {
+  position: absolute;
+  top: 5px; right: 5px;
+  z-index: 3;
+  min-width: 20px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #0c0b0a;
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #f3efe6;
+  font-family: var(--font-metal);
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+  pointer-events: none;
+}
 /* même composition que la reveal-card (.rc-head / .rc-photo / .rc-move-top), à échelle réduite :
    bandeau haut (badge rareté + logo), photo, bandeau nom juste sous la photo — plutôt qu'un
    badge ruban flottant et une seule plaque en bas. Ne s'applique qu'aux cartes verrouillées
@@ -2354,18 +2377,38 @@ body::after {
   // l'app. Pour un groupe sans image trouvée (ex: trop confidentiel), card.photo/card.logo
   // restent absents et le fallback généré (cf. genBandLogo plus haut) prend le relais normalement.
 
-  var ownedIds = loadOwned();
+  // ownedCounts : { cardId: quantité possédée }. Remplace l'ancien ownedIds (simple tableau
+  // d'ids, "possédée ou pas") pour pouvoir compter les doublons tirés en paquet. Stocké sous une
+  // nouvelle clé localStorage ("grimoire-owned-counts") ; au premier chargement après mise à
+  // jour, on migre en douceur l'ancienne clé ("grimoire-owned", tableau d'ids) en comptant
+  // chaque id existant pour 1 exemplaire, sans rien perdre de la collection déjà constituée.
+  var DEFAULT_OWNED = ["metallica", "mayhem", "drowningthelight", "blacksabbath", "dimmuborgir"];
+  var ownedCounts = loadOwned();
 
   function loadOwned() {
     try {
-      var raw = localStorage.getItem("grimoire-owned");
-      return raw ? JSON.parse(raw) : ["metallica", "mayhem", "drowningthelight", "blacksabbath", "dimmuborgir"];
-    } catch (e) { return ["metallica", "mayhem", "drowningthelight", "blacksabbath", "dimmuborgir"]; }
+      var raw = localStorage.getItem("grimoire-owned-counts");
+      if (raw) return JSON.parse(raw);
+      // migration depuis l'ancien format (tableau d'ids, pas de quantités)
+      var legacyRaw = localStorage.getItem("grimoire-owned");
+      var legacyIds = legacyRaw ? JSON.parse(legacyRaw) : DEFAULT_OWNED;
+      var counts = {};
+      legacyIds.forEach(function (id) { counts[id] = 1; });
+      return counts;
+    } catch (e) {
+      var counts = {};
+      DEFAULT_OWNED.forEach(function (id) { counts[id] = 1; });
+      return counts;
+    }
   }
   function saveOwned() {
-    try { localStorage.setItem("grimoire-owned", JSON.stringify(ownedIds)); } catch (e) {}
+    try { localStorage.setItem("grimoire-owned-counts", JSON.stringify(ownedCounts)); } catch (e) {}
     syncOwnedToCloud();
   }
+  function isOwned(id) { return !!ownedCounts[id]; }
+  function ownedCount(id) { return ownedCounts[id] || 0; }
+  function addOwned(id) { ownedCounts[id] = (ownedCounts[id] || 0) + 1; }
+  function ownedIdsList() { return Object.keys(ownedCounts).filter(function (id) { return ownedCounts[id] > 0; }); }
 
   // ---- Tabs ----
   var tabBtns = document.querySelectorAll(".tab-btn");
@@ -2413,8 +2456,8 @@ body::after {
   function renderAccountStats() {
     if (!accountStatsEl) return;
     var total = CARDS.length;
-    var owned = ownedIds.length;
-    var legendaries = CARDS.filter(function (c) { return c.rarity === "legendaire" && ownedIds.indexOf(c.id) !== -1; }).length;
+    var owned = ownedIdsList().length;
+    var legendaries = CARDS.filter(function (c) { return c.rarity === "legendaire" && isOwned(c.id); }).length;
     var totalLegendaries = CARDS.filter(function (c) { return c.rarity === "legendaire"; }).length;
     accountStatsEl.innerHTML =
       '<div class="account-stat"><div class="account-stat-value">' + owned + ' / ' + total + '</div><div class="account-stat-label">Cartes</div></div>' +
@@ -2436,23 +2479,30 @@ body::after {
     }
   }
 
-  // Fusionne la collection locale et celle du cloud (union des deux, sans perte), à utiliser
-  // juste après connexion pour ne jamais écraser une progression locale non encore synchronisée.
-  function mergeOwned(remoteIds) {
-    var set = {};
-    ownedIds.concat(remoteIds || []).forEach(function (id) { set[id] = true; });
-    ownedIds = Object.keys(set);
+  // Fusionne la collection locale et celle du cloud à la connexion, sans perte : pour chaque
+  // carte, on garde le MAX des deux quantités plutôt qu'une simple union de présence — sinon un
+  // appareil qui aurait tiré 3 exemplaires d'une carte perdrait ce compte au profit d'un autre
+  // appareil n'en ayant qu'1 (addition aurait aussi été fausse : compterait les tirages déjà
+  // synchronisés deux fois à chaque connexion croisée entre appareils).
+  function mergeOwned(remoteCounts) {
+    remoteCounts = remoteCounts || {};
+    var merged = {};
+    Object.keys(ownedCounts).forEach(function (id) { merged[id] = ownedCounts[id]; });
+    Object.keys(remoteCounts).forEach(function (id) {
+      merged[id] = Math.max(merged[id] || 0, remoteCounts[id] || 0);
+    });
+    ownedCounts = merged;
     saveOwnedLocalOnly();
   }
   function saveOwnedLocalOnly() {
-    try { localStorage.setItem("grimoire-owned", JSON.stringify(ownedIds)); } catch (e) {}
+    try { localStorage.setItem("grimoire-owned-counts", JSON.stringify(ownedCounts)); } catch (e) {}
   }
 
   function syncOwnedToCloud() {
     if (!supa || !currentUser || cloudSyncInFlight) return;
     cloudSyncInFlight = true;
     supa.from("owned_cards")
-      .upsert({ user_id: currentUser.id, card_ids: ownedIds }, { onConflict: "user_id" })
+      .upsert({ user_id: currentUser.id, card_counts: ownedCounts }, { onConflict: "user_id" })
       .then(function (res) {
         cloudSyncInFlight = false;
         if (res.error && accountSyncStatusEl) {
@@ -2466,10 +2516,10 @@ body::after {
 
   function pullOwnedFromCloud() {
     if (!supa || !currentUser) return;
-    supa.from("owned_cards").select("card_ids").eq("user_id", currentUser.id).maybeSingle()
+    supa.from("owned_cards").select("card_counts").eq("user_id", currentUser.id).maybeSingle()
       .then(function (res) {
-        var remoteIds = (res.data && res.data.card_ids) || [];
-        mergeOwned(remoteIds);
+        var remoteCounts = (res.data && res.data.card_counts) || {};
+        mergeOwned(remoteCounts);
         syncOwnedToCloud();
         renderGrid();
         renderAccountStats();
@@ -2583,7 +2633,9 @@ body::after {
     el.className = "mini-card metallicss";
     el.dataset.rarity = c.rarity;
     var built = buildCardFrameHtml(c);
-    el.innerHTML = '<div class="mc-scale">' + built.html + '</div>';
+    var qty = ownedCount(c.id);
+    var qtyBadgeHtml = qty > 1 ? '<div class="mc-qty-badge">x' + qty + '</div>' : "";
+    el.innerHTML = '<div class="mc-scale">' + built.html + '</div>' + qtyBadgeHtml;
     attachCardImageFallbacks(el, c, built);
     // ratio = largeur réelle du slot (3 colonnes responsive) / 300px, la largeur de référence du
     // cadre (cf. viewBox du SVG + .stage en plein écran). Posé après l'injection, une fois le
@@ -2618,7 +2670,7 @@ body::after {
   function populateMiniCard(el, c) {
     if (el.dataset.populated) return;
     el.dataset.populated = "1";
-    var owned = ownedIds.indexOf(c.id) !== -1;
+    var owned = isOwned(c.id);
     if (owned) populateOwnedMiniCard(el, c);
     else populateLockedMiniCard(el, c);
   }
@@ -2891,9 +2943,9 @@ body::after {
     if (pullIndex >= pullQueue.length) {
       tapHint.hidden = true;
       closeBtn.hidden = false;
-      pullQueue.forEach(function (c) {
-        if (ownedIds.indexOf(c.id) === -1) ownedIds.push(c.id);
-      });
+      // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
+      // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
+      pullQueue.forEach(function (c) { addOwned(c.id); });
       saveOwned();
       renderGrid();
       return;
