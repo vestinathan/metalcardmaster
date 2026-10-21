@@ -1013,6 +1013,18 @@ body::after {
   62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
+/* Légendaire : même geste (apparition de profil -90deg, pivot, pose) mais très étiré (1.9s au
+   lieu de 1.1s) et avec un palier suspendu plus long sur la tranche (profil quasi figé avant le
+   pivot, puis pivot plus lent) pour un reveal nettement plus solennel/épique que les autres
+   raretés — cf. demande explicite "plus lent et progressif". */
+.reveal-card[data-rarity="legendaire"].flipping { animation-name: cardFlipInLegend; animation-duration: 1.9s; }
+@keyframes cardFlipInLegend {
+  0% { opacity: 0; transform: rotateY(-90deg) scale(0.86); }
+  22% { opacity: 1; transform: rotateY(-90deg) scale(0.9); }
+  48% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
+  78% { opacity: 1; transform: rotateY(0deg) scale(0.97); }
+  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
 .rc-flip-flash {
   position: absolute; inset: -4%;
   z-index: 10;
@@ -1040,16 +1052,19 @@ body::after {
 .reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash {
   background: radial-gradient(ellipse 75% 75% at 50% 50%, color-mix(in srgb, var(--alloy-legend-a) 85%, white) 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent) 55%, transparent 75%);
   animation-name: cardFlipFlashLegend;
+  animation-duration: 1.9s;
 }
+/* recalé sur le nouveau pivot de cardFlipInLegend (~48%-78%, soit ~0.9s-1.5s sur 1.9s) au lieu de
+   l'ancien 38%-62% pensé pour le flip standard à 1.1s. */
 @keyframes cardFlipFlashLegend {
-  0%, 24% { opacity: 0; }
-  40% { opacity: 1; }
-  50% { opacity: 1; }
-  60% { opacity: 1; }
-  84% { opacity: 0; }
+  0%, 40% { opacity: 0; }
+  52% { opacity: 1; }
+  63% { opacity: 1; }
+  74% { opacity: 1; }
+  92% { opacity: 0; }
   100% { opacity: 0; }
 }
-.stage.legendary-shake { animation: legendShake .55s cubic-bezier(.36,.07,.19,.97) both; }
+.stage.legendary-shake { animation: legendShake .7s cubic-bezier(.36,.07,.19,.97) both; }
 @keyframes legendShake {
   0% { transform: translate(0, 0); }
   12% { transform: translate(-3px, 2px) rotate(-0.6deg); }
@@ -1439,8 +1454,10 @@ body::after {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-card { transition: none; }
-  .reveal-card.flipping { animation: none; }
-  .reveal-card.flipping .rc-flip-flash { animation: none; }
+  .reveal-card.flipping,
+  .reveal-card[data-rarity="legendaire"].flipping { animation: none; }
+  .reveal-card.flipping .rc-flip-flash,
+  .reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash { animation: none; }
   .pack-closed.tearing-done .pc-top, .pack-closed.tearing-done .pc-bottom { transition: none; opacity: 0; }
   .tear-flash.flashing { animation: none; }
   .reveal-card[data-rarity="legendaire"] .rc-frame,
@@ -3211,23 +3228,25 @@ body::after {
         // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
         // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
         el.addEventListener("animationend", function onFlipEnd(e) {
-          if (e.animationName === "cardFlipIn") {
+          if (e.animationName === "cardFlipIn" || e.animationName === "cardFlipInLegend") {
             el.classList.remove("flipping");
             el.removeEventListener("animationend", onFlipEnd);
           }
         });
-        // Légendaire : secousse de .stage pile au moment du retournement (~50% de cardFlipIn,
-        // 1.1s), pour renforcer l'impact du tirage le plus rare. setTimeout plutôt qu'un
-        // animationend sur une 2e keyframe : on veut déclencher AU MILIEU de l'animation en
-        // cours, pas à sa fin. classList.remove avant re-add au cas où un paquet précédent
-        // aurait laissé la classe (improbable vu le timeout court, mais coûte rien de le garder
-        // robuste à un double-tap rapide sur deux légendaires d'affilée).
+        // Légendaire : secousse de .stage pile au moment du retournement. cardFlipInLegend dure
+        // 1.9s avec son pivot vers 63% (~1200ms) au lieu des 50%/550ms du flip standard — recalé
+        // ici en même temps que le ralentissement du flip légendaire, pour renforcer l'impact du
+        // tirage le plus rare. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut
+        // déclencher AU MILIEU de l'animation en cours, pas à sa fin. classList.remove avant
+        // re-add au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout
+        // court, mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
+        // d'affilée).
         if (card.rarity === "legendaire") {
           setTimeout(function () {
             stage.classList.remove("legendary-shake");
             void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
             stage.classList.add("legendary-shake");
-          }, 550);
+          }, 1200);
         }
       });
     });
