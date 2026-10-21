@@ -2756,6 +2756,25 @@ body::after {
     else populateLockedMiniCard(el, c);
   }
 
+  // Revient à un slot vide (même coût qu'avant tout rendu) pour une mini-card qui sort largement
+  // du viewport. Nécessaire depuis que les cartes possédées affichent la fiche TCG complète
+  // (buildCardFrameHtml) plutôt qu'un résumé : chaque carte possédée instancie un vrai <canvas>
+  // metallicss (jusqu'à 1024x1024, cf. initMetallicss) sur elle-même et, pour les raretés non
+  // commune, sur son badge de rareté interne — jusqu'à 2-3 canvas par carte. Sans dépopulation,
+  // un scroll complet de la grille (255+ cartes, dont 13 légendaires avec habillage holographique
+  // en plus) les accumule TOUTES en mémoire simultanément, ce qui a fait planter Safari sur iPhone
+  // ("Un problème récurrent est survenu") — l'IntersectionObserver initial ne faisait que peupler
+  // au bon moment, jamais dépeupler. Les cartes verrouillées ("???", pas de canvas, markup léger)
+  // ne sont pas concernées : elles restent peuplées, inutile de payer un re-render pour si peu.
+  function depopulateMiniCard(el) {
+    if (!el.dataset.populated) return;
+    if (el.classList.contains("locked")) return;
+    delete el.dataset.populated;
+    el.className = "mini-card mini-card-slot";
+    el.removeAttribute("data-rarity");
+    el.innerHTML = "";
+  }
+
   // ---- Vue agrandie d'une carte depuis la collection (meme design que l'ouverture de pack,
   // via buildRevealCard) : clic sur une mini-card possedee -> fiche TCG plein ecran. ----
   var cardZoom = document.getElementById("cardZoom");
@@ -2796,9 +2815,24 @@ body::after {
         });
       }, { root: null, rootMargin: "800px 0px", threshold: 0 })
     : null;
+  // Deuxième observer, marge plus large (1200px) que celle de population (800px) : une carte
+  // n'est dépeuplée qu'après être sortie assez largement de l'écran, jamais juste après y être
+  // entrée, pour qu'un scroll lent aller-retour ne redéclenche pas sans arrêt tout le coût de
+  // population (canvas metallicss, fitCardMoves...). Observer séparé plutôt qu'un seul avec deux
+  // seuils : IntersectionObserver ne permet qu'un root/rootMargin par instance.
+  var gridUnloadObserver = (typeof IntersectionObserver !== "undefined")
+    ? new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) {
+            depopulateMiniCard(entry.target);
+          }
+        });
+      }, { root: null, rootMargin: "1200px 0px", threshold: 0 })
+    : null;
 
   function renderGrid() {
     if (gridObserver) gridObserver.disconnect();
+    if (gridUnloadObserver) gridUnloadObserver.disconnect();
     gridEl.innerHTML = "";
     var list = CARDS.filter(function (c) {
       if (activeFilter === "Tous") return true;
@@ -2807,7 +2841,9 @@ body::after {
     list.forEach(function (c) {
       // slot vide au départ (pas d'image, pas de relief metallicss, pas d'observers) : seule sa
       // taille (aspect-ratio en CSS) compte pour que le scroll ait tout de suite la bonne
-      // hauteur. Le vrai contenu n'est injecté que quand le slot approche du viewport.
+      // hauteur. Le vrai contenu n'est injecté que quand le slot approche du viewport, et retiré
+      // (depopulateMiniCard) quand il s'en éloigne largement, pour ne jamais accumuler tout le
+      // poids (canvas metallicss) de la collection entière en mémoire sur un seul scroll complet.
       var el = document.createElement("div");
       el.className = "mini-card mini-card-slot";
       el.dataset.rarity = c.rarity;
@@ -2815,9 +2851,11 @@ body::after {
       gridEl.appendChild(el);
       if (gridObserver) {
         gridObserver.observe(el);
+        if (gridUnloadObserver) gridUnloadObserver.observe(el);
       } else {
         // pas d'IntersectionObserver disponible (très vieux navigateur) : on retombe sur
-        // l'ancien comportement, tout peuplé d'un coup.
+        // l'ancien comportement, tout peuplé d'un coup, jamais dépeuplé (pas d'observer pour
+        // détecter la sortie du viewport dans ce cas).
         populateMiniCard(el, c);
       }
     });
