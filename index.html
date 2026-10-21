@@ -3836,13 +3836,24 @@ function initMetallicss(elem) {
   elem.style.textRendering = "geometricPrecision";
   elem.style.transform = "translateZ(0)";
 
+  // Le debounce (250ms) a du sens pour les appels répétés déclenchés par les observers
+  // (resize, changement de style) : on évite de relancer le rendu metallicss à chaque frame
+  // d'un redimensionnement continu. Le calcul lui-même (arbre SVG avec filtres, sérialisation
+  // XML) est en revanche assez lourd pour bloquer le thread principal de façon synchrone —
+  // appelé en synchrone au moment même où une carte de pack-opening vient d'être tapée/créée,
+  // ça produit un vrai temps mort perceptible juste après le tap, AVANT même que la première
+  // frame de l'animation CSS de retournement n'ait pu être peinte (attendre 250ms via le
+  // debounce n'est pas mieux : ça retarde juste ce même blocage sans le supprimer). D'où le
+  // premier rendu différé après le prochain repaint via requestAnimationFrame, pour laisser le
+  // navigateur peindre l'état initial de la carte (et le début de son animation) avant de
+  // lancer ce calcul coûteux.
   const debounced = debounce(metallicss),
     observer = new MutationObserver(() => debounced(elem)),
     dimensionsObserver = new ResizeObserver(() => debounced(elem));
 
   observer.observe(elem, { attributes: true, attributeFilter: ["style"] });
   dimensionsObserver.observe(elem);
-  debounced(elem);
+  requestAnimationFrame(function () { metallicss(elem); });
 }
 window.applyMetallicss = initMetallicss;
 
