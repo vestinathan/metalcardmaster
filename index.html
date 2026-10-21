@@ -356,7 +356,6 @@ body::after {
   --convexity: 2; --metal: lead;
 }
 .mini-card[data-rarity="rare"] .mc-rarity-badge { background: var(--alloy-rare-a); color: var(--ink-on-accent); border-color: var(--alloy-rare-a); --metal: copper; }
-.mini-card[data-rarity="super_rare"] .mc-rarity-badge { background: var(--alloy-super-a); color: #1a1208; border-color: var(--alloy-super-a); --metal: neutral; }
 .mini-card[data-rarity="ultra_rare"] .mc-rarity-badge { background: var(--alloy-ultra-a); color: var(--ink-on-accent); border-color: var(--alloy-ultra-a); --metal: copper; }
 .mini-card[data-rarity="legendaire"] .mc-rarity-badge {
   background: linear-gradient(90deg, var(--alloy-legend-a), var(--alloy-legend-b));
@@ -380,7 +379,6 @@ body::after {
    teintes que le cadre SVG de la reveal-card (.rc-frame) : commune en gris/argent, rare/super
    rare/ultra rare toutes en rouge sombre uniforme, légendaire seule en dégradé couleur-groupe. */
 .mini-card[data-rarity="rare"] .mc-band,
-.mini-card[data-rarity="super_rare"] .mc-band,
 .mini-card[data-rarity="ultra_rare"] .mc-band { background: #7a2b28; }
 .mini-card[data-rarity="legendaire"] .mc-band {
   background: linear-gradient(155deg, var(--holo-a, var(--alloy-legend-a)) 0%, var(--holo-b, var(--alloy-legend-b)) 100%);
@@ -389,13 +387,11 @@ body::after {
 /* relief metallicss sur le cadre (4px visibles autour de .mc-art) : convexité et finition par rareté */
 .mini-card { --convexity: 1; --metal: lead; }
 .mini-card[data-rarity="rare"] { --convexity: 2; --metal: copper; }
-.mini-card[data-rarity="super_rare"] { --convexity: 2; --metal: neutral; }
 .mini-card[data-rarity="ultra_rare"] { --convexity: 3; --metal: copper; }
 .mini-card[data-rarity="legendaire"] { --convexity: 4; --metal: gold; }
 .mini-card.locked.metallicss > canvas.metal { display: none; }
 
 .mini-card[data-rarity="rare"]::before,
-.mini-card[data-rarity="super_rare"]::before,
 .mini-card[data-rarity="ultra_rare"]::before { background: radial-gradient(ellipse 70% 60% at 50% 45%, color-mix(in srgb, #7a2b28 70%, transparent), transparent 72%); opacity: 0.6; }
 .mini-card[data-rarity="legendaire"]::before { background: radial-gradient(ellipse 75% 65% at 50% 45%, color-mix(in srgb, var(--holo-a, var(--alloy-legend-a)) 80%, transparent), transparent 72%); opacity: 0.85; animation: glowPulse 2.2s ease-in-out infinite; }
 
@@ -1025,12 +1021,11 @@ body::after {
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' fill='none'%3E%3Cdefs%3E%3Cfilter id='grain' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='6' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.55 0.55 0.55 0 -0.42' result='fineA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='1' seed='19' result='sparse'/%3E%3CfeColorMatrix in='sparse' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0.9 0.9 0 -0.86' result='sparseA'/%3E%3CfeMerge%3E%3CfeMergeNode in='fineA'/%3E%3CfeMergeNode in='sparseA'/%3E%3C/feMerge%3E%3C/filter%3E%3CclipPath id='clipOuterRing'%3E%3Cpath fill-rule='evenodd' d='M0 16 Q0 0 16 0 L284 0 Q300 0 300 16 L300 404 Q300 420 284 420 L16 420 Q0 420 0 404 Z M9 18 Q9 9 18 9 L282 9 Q291 9 291 18 L291 402 Q291 411 282 411 L18 411 Q9 411 9 402 Z'/%3E%3C/clipPath%3E%3CclipPath id='clipBand'%3E%3Crect x='9' y='9' width='282' height='402' rx='13'/%3E%3C/clipPath%3E%3CclipPath id='clipInnerRing'%3E%3Cpath fill-rule='evenodd' d='M22 31 Q22 22 31 22 L269 22 Q278 22 278 31 L278 389 Q278 398 269 398 L31 398 Q22 398 22 389 Z M26.5 33 Q26.5 26.5 33 26.5 L267 26.5 Q273.5 26.5 273.5 33 L273.5 387 Q273.5 393.5 267 393.5 L33 393.5 Q26.5 393.5 26.5 387 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='0' y='0' width='300' height='420' rx='16' fill='%230c0b0a'/%3E%3Cg clip-path='url(%23clipOuterRing)'%3E%3Crect x='0' y='0' width='300' height='420' fill='%234a463e' filter='url(%23grain)' opacity='0.6'/%3E%3C/g%3E%3Crect x='9' y='9' width='282' height='402' rx='13' fill='%23726c60'/%3E%3Cg clip-path='url(%23clipBand)'%3E%3Crect x='9' y='9' width='282' height='402' fill='%234a463e' filter='url(%23grain)' opacity='0.28'/%3E%3C/g%3E%3Crect x='22' y='22' width='256' height='376' rx='9' fill='none' stroke='%230c0b0a' stroke-width='9'/%3E%3Cg clip-path='url(%23clipInnerRing)'%3E%3Crect x='22' y='22' width='256' height='376' fill='%234a463e' filter='url(%23grain)' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
   box-shadow: 0 10px 28px -10px rgba(0,0,0,0.7);
 }
-/* Rare / Super Rare / Ultra Rare : même gabarit simple que Commune (liseré noir + bande unie +
-   grain métallique fin, bords nets), partagé via ce sélecteur combiné — seule la teinte de la
-   bande change (rouge foncé uniforme au lieu du gris/argent de Commune, pas de dégradé de
-   couleur entre ces 3 raretés). */
+/* Rare / Ultra Rare : même gabarit simple que Commune (liseré noir + bande unie + grain
+   métallique fin, bords nets), partagé via ce sélecteur combiné — seule la teinte de la bande
+   change (rouge foncé uniforme au lieu du gris/argent de Commune, pas de dégradé de couleur
+   entre ces 2 raretés). */
 .reveal-card[data-rarity="rare"] .rc-frame,
-.reveal-card[data-rarity="super_rare"] .rc-frame,
 .reveal-card[data-rarity="ultra_rare"] .rc-frame {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 420' fill='none'%3E%3Cdefs%3E%3Cfilter id='grain' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='6' result='fine'/%3E%3CfeColorMatrix in='fine' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.55 0.55 0.55 0 -0.42' result='fineA'/%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='1' seed='19' result='sparse'/%3E%3CfeColorMatrix in='sparse' type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0.9 0.9 0 -0.86' result='sparseA'/%3E%3CfeMerge%3E%3CfeMergeNode in='fineA'/%3E%3CfeMergeNode in='sparseA'/%3E%3C/feMerge%3E%3C/filter%3E%3CclipPath id='clipOuterRing'%3E%3Cpath fill-rule='evenodd' d='M0 16 Q0 0 16 0 L284 0 Q300 0 300 16 L300 404 Q300 420 284 420 L16 420 Q0 420 0 404 Z M9 18 Q9 9 18 9 L282 9 Q291 9 291 18 L291 402 Q291 411 282 411 L18 411 Q9 411 9 402 Z'/%3E%3C/clipPath%3E%3CclipPath id='clipBand'%3E%3Crect x='9' y='9' width='282' height='402' rx='13'/%3E%3C/clipPath%3E%3CclipPath id='clipInnerRing'%3E%3Cpath fill-rule='evenodd' d='M22 31 Q22 22 31 22 L269 22 Q278 22 278 31 L278 389 Q278 398 269 398 L31 398 Q22 398 22 389 Z M26.5 33 Q26.5 26.5 33 26.5 L267 26.5 Q273.5 26.5 273.5 33 L273.5 387 Q273.5 393.5 267 393.5 L33 393.5 Q26.5 393.5 26.5 387 Z'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='0' y='0' width='300' height='420' rx='16' fill='%230c0b0a'/%3E%3Cg clip-path='url(%23clipOuterRing)'%3E%3Crect x='0' y='0' width='300' height='420' fill='%232e0f0d' filter='url(%23grain)' opacity='0.6'/%3E%3C/g%3E%3Crect x='9' y='9' width='282' height='402' rx='13' fill='%237a2b28'/%3E%3Cg clip-path='url(%23clipBand)'%3E%3Crect x='9' y='9' width='282' height='402' fill='%232e0f0d' filter='url(%23grain)' opacity='0.28'/%3E%3C/g%3E%3Crect x='22' y='22' width='256' height='376' rx='9' fill='none' stroke='%230c0b0a' stroke-width='9'/%3E%3Cg clip-path='url(%23clipInnerRing)'%3E%3Crect x='22' y='22' width='256' height='376' fill='%232e0f0d' filter='url(%23grain)' opacity='0.55'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat;
@@ -1247,11 +1242,6 @@ body::after {
   color: var(--ink-on-accent);
   border-color: var(--alloy-rare-a);
 }
-.reveal-card[data-rarity="super_rare"] .rc-rarity-label {
-  background: var(--alloy-super-a);
-  color: #1a1208;
-  border-color: var(--alloy-super-a);
-}
 .reveal-card[data-rarity="ultra_rare"] .rc-rarity-label {
   background: var(--alloy-ultra-a); color: var(--ink-on-accent); border-color: var(--alloy-ultra-a);
 }
@@ -1263,7 +1253,6 @@ body::after {
 /* relief metallicss sur la pastille — meme logique de finition par rarete que .mc-rarity-badge,
    sauf commune (pas de texture pour le palier le plus bas, cf. demande) */
 .reveal-card[data-rarity="rare"] .rc-rarity-label { --metal: copper; --convexity: 2; }
-.reveal-card[data-rarity="super_rare"] .rc-rarity-label { --metal: neutral; --convexity: 2; }
 .reveal-card[data-rarity="ultra_rare"] .rc-rarity-label { --metal: copper; --convexity: 3; }
 .reveal-card[data-rarity="legendaire"] .rc-rarity-label { --metal: gold; --convexity: 4; }
 
@@ -1539,10 +1528,10 @@ body::after {
     { id: "slayer", name: "Slayer", genre: "Thrash Metal", country: "US", rarity: "ultra_rare", influence: 79, views: 510, photo: "images/bands/slayer-photo.jpg", logo: "images/bands/slayer-logo.png",
       founded: 1981, hit: { title: "Reign in Blood", year: 1986 },
       bio: "Figure la plus extrême du « Big Four » du thrash, reconnue pour sa vitesse brute et ses thèmes macabres." },
-    { id: "behemoth", name: "Behemoth", genre: "Black/Death Metal", country: "PL", rarity: "super_rare", influence: 71, views: 210, photo: "images/bands/behemoth-photo.jpg", logo: "images/bands/behemoth-logo.png",
+    { id: "behemoth", name: "Behemoth", genre: "Black/Death Metal", country: "PL", rarity: "ultra_rare", influence: 71, views: 210, photo: "images/bands/behemoth-photo.jpg", logo: "images/bands/behemoth-logo.png",
       founded: 1991, hit: { title: "The Satanist", year: 2014 },
       bio: "Groupe polonais fondé en 1991, référence du black/death metal blasphématoire porté par des shows scéniques spectaculaires." },
-    { id: "dimmuborgir", name: "Dimmu Borgir", genre: "Black Metal Symph.", country: "NO", rarity: "super_rare", influence: 81, views: 190, photo: "images/bands/dimmuborgir-photo.jpg", logo: "images/bands/dimmuborgir-logo.png",
+    { id: "dimmuborgir", name: "Dimmu Borgir", genre: "Black Metal Symph.", country: "NO", rarity: "ultra_rare", influence: 81, views: 190, photo: "images/bands/dimmuborgir-photo.jpg", logo: "images/bands/dimmuborgir-logo.png",
       founded: 1993, hit: { title: "Enthrone Darkness Triumphant", year: 1997 },
       bio: "Pionnier norvégien du black metal symphonique, connu pour mêler orchestrations grandioses et atmosphère glaciale." },
     { id: "mayhem", name: "Mayhem", genre: "Black Metal", country: "NO", rarity: "rare", influence: 68, views: 72, photo: "images/bands/mayhem-photo.jpg", logo: "images/bands/mayhem-logo.png",
@@ -1560,7 +1549,7 @@ body::after {
     { id: "moonspell", name: "Moonspell", genre: "Gothic Metal", country: "PT", rarity: "rare", influence: 62, views: 65, photo: "images/bands/moonspell-photo.jpg", logo: "images/bands/moonspell-logo.png",
       founded: 1992, hit: { title: "Wolfheart", year: 1995 },
       bio: "Groupe portugais emblématique du metal gothique, reconnu pour son atmosphère théâtrale et ses textes évocateurs." },
-    { id: "rottingchrist", name: "Rotting Christ", genre: "Black Metal", country: "GR", rarity: "super_rare", influence: 66, views: 180, photo: "images/bands/rottingchrist-photo.jpg", logo: "images/bands/rottingchrist-logo.png",
+    { id: "rottingchrist", name: "Rotting Christ", genre: "Black Metal", country: "GR", rarity: "ultra_rare", influence: 66, views: 180, photo: "images/bands/rottingchrist-photo.jpg", logo: "images/bands/rottingchrist-logo.png",
       founded: 1987, hit: { title: "Thy Mighty Contract", year: 1993 },
       bio: "Doyen du metal extrême grec, actif depuis 1987 et salué pour son évolution constante au fil des décennies." },
 // ========= THRASH METAL =========
@@ -2272,10 +2261,10 @@ body::after {
   { id: "musician-araya", type: "musician", band: "slayer", name: "Tom Araya", genre: "Chant / Basse", country: "CL", rarity: "ultra_rare", influence: 76, views: 440, photo: "images/bands/musician-araya-photo.jpg", logo: "images/bands/slayer-logo.png",
     founded: 1981, hit: { title: "Eyes of the Insane", year: 2006 },
     bio: "Chanteur et bassiste de Slayer depuis 1981, recruté par le guitariste Kerry King. Resté membre du groupe jusqu'à sa dissolution en 2019, avant une brève réunion en 2024." },
-  { id: "musician-nergal", type: "musician", band: "behemoth", name: "Nergal", genre: "Chant / Guitare", country: "PL", rarity: "super_rare", influence: 69, views: 180, photo: "images/bands/musician-nergal-photo.jpg", logo: "images/bands/behemoth-logo.png",
+  { id: "musician-nergal", type: "musician", band: "behemoth", name: "Nergal", genre: "Chant / Guitare", country: "PL", rarity: "ultra_rare", influence: 69, views: 180, photo: "images/bands/musician-nergal-photo.jpg", logo: "images/bands/behemoth-logo.png",
     founded: 1991, hit: { title: "Blow Your Trumpets Gabriel", year: 2013 },
     bio: "De son vrai nom Adam Darski, il fonde Behemoth en 1991 en Pologne à l'adolescence. Chanteur, guitariste et principal compositeur, il a fait évoluer le groupe vers un style black/death hybride." },
-  { id: "musician-shagrath", type: "musician", band: "dimmuborgir", name: "Shagrath", genre: "Chant", country: "NO", rarity: "super_rare", influence: 78, views: 165, photo: "images/bands/musician-shagrath-photo.jpg", logo: "images/bands/dimmuborgir-logo.png",
+  { id: "musician-shagrath", type: "musician", band: "dimmuborgir", name: "Shagrath", genre: "Chant", country: "NO", rarity: "ultra_rare", influence: 78, views: 165, photo: "images/bands/musician-shagrath-photo.jpg", logo: "images/bands/dimmuborgir-logo.png",
     founded: 1993, hit: { title: "Mourning Palace", year: 1997 },
     bio: "De son vrai nom Stian Thoresen, il fonde Dimmu Borgir en 1993 en Norvège. Chanteur principal et multi-instrumentiste, il reste la figure centrale du groupe à travers tous ses albums." },
   { id: "musician-csihar", type: "musician", band: "mayhem", name: "Attila Csihar", genre: "Chant", country: "HU", rarity: "rare", influence: 64, views: 66, photo: "images/bands/musician-csihar-photo.jpg", logo: "images/bands/mayhem-logo.png",
@@ -2447,7 +2436,7 @@ body::after {
   }
 
   var RARITY_LABEL = {
-    commune: "Commune", rare: "Rare", super_rare: "Super Rare",
+    commune: "Commune", rare: "Rare",
     ultra_rare: "Ultra Rare", legendaire: "Légendaire"
   };
 
@@ -2666,9 +2655,9 @@ body::after {
   }
 
   // ---- Filters ----
-  var FILTERS = ["Tous", "Légendaire", "Ultra Rare", "Super Rare", "Rare", "Commune"];
+  var FILTERS = ["Tous", "Légendaire", "Ultra Rare", "Rare", "Commune"];
   var rarityKeyByLabel = {
-    "Légendaire": "legendaire", "Ultra Rare": "ultra_rare", "Super Rare": "super_rare",
+    "Légendaire": "legendaire", "Ultra Rare": "ultra_rare",
     "Rare": "rare", "Commune": "commune"
   };
   var activeFilter = "Tous";
@@ -2906,8 +2895,8 @@ body::after {
   // Les poids ne sont PAS la fréquence des cartes dans le pool (ça, c'est juste la taille des
   // groupes ci-dessous) : ce sont des probabilités cibles, indépendantes du nombre de cartes
   // disponibles à chaque palier.
-  var RARITY_DROP_WEIGHTS = { commune: 60, rare: 25, super_rare: 10, ultra_rare: 4, legendaire: 1 };
-  var GUARANTEED_SLOT_RARITIES = ["rare", "super_rare", "ultra_rare", "legendaire"];
+  var RARITY_DROP_WEIGHTS = { commune: 60, rare: 28, ultra_rare: 10, legendaire: 2 };
+  var GUARANTEED_SLOT_RARITIES = ["rare", "ultra_rare", "legendaire"];
 
   // Tire une rareté au hasard selon une table de poids { rarity: poids }, puis une carte au
   // hasard dans le groupe correspondant du pool. Si le pool n'a aucune carte pour la rareté
@@ -2944,7 +2933,7 @@ body::after {
   // le tirage aux cartes type==="musician" uniquement, pour un paquet dédié aux artistes — même
   // logique de pondération/garantie dans les deux cas, seul le pool de départ change.
   function pickPack(packKind) {
-    var rarityWeight = { commune: 0, rare: 1, super_rare: 2, ultra_rare: 3, legendaire: 4 };
+    var rarityWeight = { commune: 0, rare: 1, ultra_rare: 2, legendaire: 3 };
     var pool = packKind === "musicians"
       ? CARDS.filter(function (c) { return c.type === "musician"; })
       : CARDS.slice();
