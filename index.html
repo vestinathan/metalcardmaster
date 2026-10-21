@@ -1014,16 +1014,28 @@ body::after {
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
 /* Légendaire : même geste (apparition de profil -90deg, pivot, pose) mais très étiré (3.2s au
-   lieu de 1.1s) et avec un palier suspendu plus long sur la tranche (profil quasi figé avant le
-   pivot, puis pivot plus lent) pour un reveal nettement plus solennel/épique que les autres
-   raretés — cf. demandes explicites "plus lent et progressif", encore ralenti après un premier
-   passage à 1.9s jugé encore trop rapide. */
+   lieu de 1.1s). Demande explicite : ce n'est pas la durée totale qui doit se sentir, c'est le
+   RETOURNEMENT lui-même (le passage de -90deg à 0deg) qui doit être long et "vibrant" plutôt
+   qu'un saut rapide noyé dans une timeline par ailleurs étirée (version précédente : tout le
+   pivot tenait dans 48%-78%, soit ~1s sur les 3.2s, avec une seule interpolation continue donc
+   perçue comme un geste rapide malgré l'enveloppe longue). Ici le pivot occupe l'essentiel de la
+   timeline (8%-92%, soit ~2.7s) et traverse plusieurs paliers de rotation (-90 → -55 → -25 → -8 →
+   0) au lieu d'une seule interpolation lissée, pour que l'œil perçoive un vrai tourbillon qui
+   ralentit en approchant de la face, avec un léger overshoot (-4deg) juste avant la pose finale
+   pour accentuer encore la sensation de vibration/rebond sur l'arrivée. */
 .reveal-card[data-rarity="legendaire"].flipping { animation-name: cardFlipInLegend; animation-duration: 3.2s; }
 @keyframes cardFlipInLegend {
   0% { opacity: 0; transform: rotateY(-90deg) scale(0.86); }
-  22% { opacity: 1; transform: rotateY(-90deg) scale(0.9); }
-  48% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
-  78% { opacity: 1; transform: rotateY(0deg) scale(0.97); }
+  8% { opacity: 1; transform: rotateY(-90deg) scale(0.88); }
+  20% { transform: rotateY(-78deg) scale(0.89); }
+  32% { transform: rotateY(-62deg) scale(0.9); }
+  44% { transform: rotateY(-46deg) scale(0.91); }
+  56% { transform: rotateY(-31deg) scale(0.93); }
+  67% { transform: rotateY(-18deg) scale(0.95); }
+  77% { transform: rotateY(-9deg) scale(0.96); }
+  85% { transform: rotateY(-3deg) scale(0.98); }
+  91% { transform: rotateY(4deg) scale(0.99); }
+  96% { transform: rotateY(-1.5deg) scale(1); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
 .rc-flip-flash {
@@ -1055,26 +1067,50 @@ body::after {
   animation-name: cardFlipFlashLegend;
   animation-duration: 3.2s;
 }
-/* recalé sur le pivot de cardFlipInLegend (~48%-78%) qui reste la même fraction quelle que soit
-   la durée totale de l'animation. */
+/* recalé sur le nouveau pivot étalé de cardFlipInLegend : la carte est de profil le plus fin vers
+   85-91% de la timeline (cf. keyframes ci-dessus), donc le pic du flash est repoussé vers cette
+   fraction au lieu du milieu, pour culminer pile quand la carte est tranche-sur-tranche — le
+   moment le plus dramatique du retournement. */
 @keyframes cardFlipFlashLegend {
-  0%, 40% { opacity: 0; }
-  52% { opacity: 1; }
-  63% { opacity: 1; }
-  74% { opacity: 1; }
-  92% { opacity: 0; }
+  0%, 55% { opacity: 0; }
+  72% { opacity: 0.6; }
+  85% { opacity: 1; }
+  91% { opacity: 1; }
+  97% { opacity: 0.3; }
   100% { opacity: 0; }
 }
-.stage.legendary-shake { animation: legendShake .9s cubic-bezier(.36,.07,.19,.97) both; }
+/* La secousse dure maintenant quasi toute la durée du pivot (cf. le setTimeout plus bas, déclenché
+   dès 8% de cardFlipInLegend plutôt qu'à son pivot) : au lieu d'un unique "impact" ponctuel après
+   coup, .stage vibre PENDANT tout le retournement — c'est le "vibrant" demandé. Secousse plus fine
+   et resserrée (petites oscillations rapides) plutôt qu'un gros aller-retour, pour rester lisible
+   sur une durée longue sans donner le mal de mer. */
+.stage.legendary-shake { animation: legendShake 2.65s cubic-bezier(.45,0,.55,1) both; }
 @keyframes legendShake {
-  0% { transform: translate(0, 0); }
-  12% { transform: translate(-3px, 2px) rotate(-0.6deg); }
-  24% { transform: translate(4px, -2px) rotate(0.7deg); }
-  36% { transform: translate(-4px, 1px) rotate(-0.5deg); }
-  48% { transform: translate(3px, -1px) rotate(0.5deg); }
-  60% { transform: translate(-2px, 2px) rotate(-0.3deg); }
-  72% { transform: translate(2px, -1px) rotate(0.3deg); }
-  84% { transform: translate(-1px, 1px) rotate(-0.15deg); }
+  0% { transform: translate(0, 0) rotate(0deg); }
+  4% { transform: translate(-2px, 1px) rotate(-0.4deg); }
+  8% { transform: translate(2px, -1px) rotate(0.4deg); }
+  12% { transform: translate(-2px, 1px) rotate(-0.35deg); }
+  16% { transform: translate(2px, -1px) rotate(0.35deg); }
+  20% { transform: translate(-2px, 1px) rotate(-0.3deg); }
+  24% { transform: translate(2px, -1px) rotate(0.3deg); }
+  28% { transform: translate(-1.5px, 1px) rotate(-0.3deg); }
+  32% { transform: translate(1.5px, -1px) rotate(0.3deg); }
+  36% { transform: translate(-1.5px, 1px) rotate(-0.25deg); }
+  40% { transform: translate(1.5px, -1px) rotate(0.25deg); }
+  44% { transform: translate(-1.5px, 1px) rotate(-0.25deg); }
+  48% { transform: translate(1.5px, -1px) rotate(0.25deg); }
+  52% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
+  56% { transform: translate(1px, -0.5px) rotate(0.2deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
+  64% { transform: translate(1px, -0.5px) rotate(0.2deg); }
+  68% { transform: translate(-1px, 0.5px) rotate(-0.15deg); }
+  72% { transform: translate(1px, -0.5px) rotate(0.15deg); }
+  76% { transform: translate(-3px, 2px) rotate(-0.7deg); }
+  80% { transform: translate(4px, -2px) rotate(0.8deg); }
+  84% { transform: translate(-3px, 1.5px) rotate(-0.6deg); }
+  88% { transform: translate(2px, -1px) rotate(0.4deg); }
+  92% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
+  96% { transform: translate(0.5px, -0.3px) rotate(0.1deg); }
   100% { transform: translate(0, 0) rotate(0deg); }
 }
 
@@ -3234,20 +3270,21 @@ body::after {
             el.removeEventListener("animationend", onFlipEnd);
           }
         });
-        // Légendaire : secousse de .stage pile au moment du retournement. cardFlipInLegend dure
-        // 3.2s avec son pivot vers 63% (~2015ms) au lieu des 50%/550ms du flip standard — recalé
-        // ici en même temps que le ralentissement du flip légendaire, pour renforcer l'impact du
-        // tirage le plus rare. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut
-        // déclencher AU MILIEU de l'animation en cours, pas à sa fin. classList.remove avant
-        // re-add au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout
-        // court, mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
+        // Légendaire : .stage vibre PENDANT tout le retournement, pas juste un sursaut après coup.
+        // cardFlipInLegend (3.2s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
+        // la secousse (durée 2.65s, cf. @keyframes legendShake) démarre dès 8% (~256ms) pour courir
+        // en parallèle du pivot et se calmer en même temps que la carte se stabilise face à
+        // l'écran. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut déclencher à
+        // un instant précis de l'animation en cours, pas à sa fin. classList.remove avant re-add
+        // au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout court,
+        // mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
         // d'affilée).
         if (card.rarity === "legendaire") {
           setTimeout(function () {
             stage.classList.remove("legendary-shake");
             void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
             stage.classList.add("legendary-shake");
-          }, 2015);
+          }, 256);
         }
       });
     });
