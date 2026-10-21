@@ -1033,6 +1033,34 @@ body::after {
   78% { opacity: 0; }
   100% { opacity: 0; }
 }
+/* Légendaire : le flip standard ci-dessus reste identique (même timing, même tranche), mais le
+   flash devient doré et plus intense/étalé (teinte --alloy-legend-a au lieu de blanc pur, pic
+   plus large et plus opaque), et .stage tremble juste après le retournement — un vrai "impact"
+   pour le tirage le plus rare plutôt qu'un simple sursaut lumineux comme les autres raretés. */
+.reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash {
+  background: radial-gradient(ellipse 75% 75% at 50% 50%, color-mix(in srgb, var(--alloy-legend-a) 85%, white) 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent) 55%, transparent 75%);
+  animation-name: cardFlipFlashLegend;
+}
+@keyframes cardFlipFlashLegend {
+  0%, 24% { opacity: 0; }
+  40% { opacity: 1; }
+  50% { opacity: 1; }
+  60% { opacity: 1; }
+  84% { opacity: 0; }
+  100% { opacity: 0; }
+}
+.stage.legendary-shake { animation: legendShake .55s cubic-bezier(.36,.07,.19,.97) both; }
+@keyframes legendShake {
+  0% { transform: translate(0, 0); }
+  12% { transform: translate(-3px, 2px) rotate(-0.6deg); }
+  24% { transform: translate(4px, -2px) rotate(0.7deg); }
+  36% { transform: translate(-4px, 1px) rotate(-0.5deg); }
+  48% { transform: translate(3px, -1px) rotate(0.5deg); }
+  60% { transform: translate(-2px, 2px) rotate(-0.3deg); }
+  72% { transform: translate(2px, -1px) rotate(0.3deg); }
+  84% { transform: translate(-1px, 1px) rotate(-0.15deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
 
 /* cadre — vrai encadrement épais façon carte à collectionner (type Pokémon TCG) : bordure en
    relief métallique de ~11px. .rc-window est nichée à l'intérieur de son padding plutôt que
@@ -1418,6 +1446,7 @@ body::after {
   .reveal-card[data-rarity="legendaire"] .rc-frame,
   .reveal-card[data-rarity="legendaire"] .rc-frame::after,
   .reveal-card[data-rarity="legendaire"] .rc-window::after { animation: none; }
+  .stage.legendary-shake { animation: none; }
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3169,6 +3198,19 @@ body::after {
             el.removeEventListener("animationend", onFlipEnd);
           }
         });
+        // Légendaire : secousse de .stage pile au moment du retournement (~50% de cardFlipIn,
+        // 1.1s), pour renforcer l'impact du tirage le plus rare. setTimeout plutôt qu'un
+        // animationend sur une 2e keyframe : on veut déclencher AU MILIEU de l'animation en
+        // cours, pas à sa fin. classList.remove avant re-add au cas où un paquet précédent
+        // aurait laissé la classe (improbable vu le timeout court, mais coûte rien de le garder
+        // robuste à un double-tap rapide sur deux légendaires d'affilée).
+        if (card.rarity === "legendaire") {
+          setTimeout(function () {
+            stage.classList.remove("legendary-shake");
+            void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
+            stage.classList.add("legendary-shake");
+          }, 550);
+        }
       });
     });
     tapHint.hidden = false;
