@@ -999,6 +999,35 @@ body::after {
 }
 .reveal-card.showing { opacity: 1; transform: rotateX(0deg) rotateY(0deg) scale(1); }
 .reveal-card[hidden] { display: none; }
+/* flip d'apparition : au tap, la nouvelle carte entre en tournant sur elle-même (profil à 90°
+   passant par une tranche quasi invisible, comme un vrai retournement de carte) plutôt que le
+   simple scale+fade précédent. Piloté par la classe .flipping, retirée une fois l'animation finie
+   (cf. nextCard()) pour laisser le tilt au doigt (qui pose son propre transform inline sur
+   .reveal-card) reprendre la main sans lutter avec cette keyframe. Le flash lumineux (.rc-flip-
+   flash) est un enfant séparé plutôt qu'un pseudo-élément, pour pouvoir le superposer au-dessus
+   du cadre (z-index) sans dépendre d'un ::after déjà pris par d'autres raretés. */
+.reveal-card.flipping { animation: cardFlipIn .62s cubic-bezier(.3,.85,.3,1) both; }
+@keyframes cardFlipIn {
+  0% { opacity: 0; transform: rotateY(-90deg) scale(0.88); }
+  45% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
+  55% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
+  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
+.rc-flip-flash {
+  position: absolute; inset: -4%;
+  z-index: 10;
+  border-radius: 10px;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(255,255,255,0.95), rgba(255,255,255,0) 70%);
+  opacity: 0;
+  pointer-events: none;
+}
+.reveal-card.flipping .rc-flip-flash { animation: cardFlipFlash .62s cubic-bezier(.3,.85,.3,1) both; }
+@keyframes cardFlipFlash {
+  0%, 44% { opacity: 0; }
+  50% { opacity: 1; }
+  70% { opacity: 0; }
+  100% { opacity: 0; }
+}
 
 /* cadre — vrai encadrement épais façon carte à collectionner (type Pokémon TCG) : bordure en
    relief métallique de ~11px. .rc-window est nichée à l'intérieur de son padding plutôt que
@@ -1377,6 +1406,8 @@ body::after {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal-card { transition: none; }
+  .reveal-card.flipping { animation: none; }
+  .reveal-card.flipping .rc-flip-flash { animation: none; }
   .pack-closed.tearing-done .pc-top, .pack-closed.tearing-done .pc-bottom { transition: none; opacity: 0; }
   .tear-flash.flashing { animation: none; }
   .reveal-card[data-rarity="legendaire"] .rc-frame,
@@ -3121,7 +3152,19 @@ body::after {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
     requestAnimationFrame(function () {
-      requestAnimationFrame(function () { el.classList.add("showing"); });
+      requestAnimationFrame(function () {
+        el.classList.add("showing", "flipping");
+        // .flipping ne sert qu'à jouer l'animation d'entrée une fois ; on la retire à la fin pour
+        // que le transform inline posé par le tilt au doigt (applyTilt/resetTilt plus haut) ne
+        // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
+        // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
+        el.addEventListener("animationend", function onFlipEnd(e) {
+          if (e.animationName === "cardFlipIn") {
+            el.classList.remove("flipping");
+            el.removeEventListener("animationend", onFlipEnd);
+          }
+        });
+      });
     });
     tapHint.hidden = false;
   }
@@ -3297,7 +3340,9 @@ body::after {
     el.className = "reveal-card";
     el.dataset.rarity = card.rarity;
     var built = buildCardFrameHtml(card);
-    el.innerHTML = built.html;
+    // .rc-flip-flash : enfant dédié au flash lumineux de l'animation .flipping (cf. CSS), inerte
+    // et invisible (opacity:0) tant que cette classe n'est pas posée par nextCard()/openCardZoom.
+    el.innerHTML = built.html + '<div class="rc-flip-flash"></div>';
     attachCardImageFallbacks(el, card, built);
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
