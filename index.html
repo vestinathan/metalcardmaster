@@ -2780,17 +2780,72 @@ body::after {
   var pullIndex = -1;
   var revealEls = [];
 
+  // Tirage pondéré par rareté façon TCG (Pokémon TCG Pocket et consorts) : les 4 premières
+  // cartes suivent des taux de drop par palier (grosse majorité de communes, légendaire très
+  // rare), et la 5e — celle qui clôt l'ouverture, cf. tri par rareté croissante plus bas — est
+  // "garantie" rare ou mieux, jamais commune, pour que chaque paquet ait un minimum d'intérêt.
+  // Les poids ne sont PAS la fréquence des cartes dans le pool (ça, c'est juste la taille des
+  // groupes ci-dessous) : ce sont des probabilités cibles, indépendantes du nombre de cartes
+  // disponibles à chaque palier.
+  var RARITY_DROP_WEIGHTS = { commune: 60, rare: 25, super_rare: 10, ultra_rare: 4, legendaire: 1 };
+  var GUARANTEED_SLOT_RARITIES = ["rare", "super_rare", "ultra_rare", "legendaire"];
+
+  // Tire une rareté au hasard selon une table de poids { rarity: poids }, puis une carte au
+  // hasard dans le groupe correspondant du pool. Si le pool n'a aucune carte pour la rareté
+  // tirée (ex: pool "musicians" trop restreint sur un palier), retombe sur la rareté la plus
+  // proche disponible plutôt que de planter.
+  function pickWeightedRarity(groupsByRarity, weights) {
+    var available = Object.keys(weights).filter(function (r) {
+      return groupsByRarity[r] && groupsByRarity[r].length > 0;
+    });
+    if (available.length === 0) return null;
+    var total = available.reduce(function (sum, r) { return sum + weights[r]; }, 0);
+    var roll = Math.random() * total;
+    var acc = 0;
+    for (var i = 0; i < available.length; i++) {
+      acc += weights[available[i]];
+      if (roll < acc) return available[i];
+    }
+    return available[available.length - 1];
+  }
+
+  function groupByRarity(pool) {
+    var groups = {};
+    pool.forEach(function (c) {
+      (groups[c.rarity] = groups[c.rarity] || []).push(c);
+    });
+    return groups;
+  }
+
+  function pickOneFromGroup(group) {
+    return group[Math.floor(Math.random() * group.length)];
+  }
+
   // packKind : "daily" (ou absent) pioche dans tout CARDS comme avant ; "musicians" restreint
-  // le tirage aux cartes type==="musician" uniquement, pour un paquet dédié aux artistes.
+  // le tirage aux cartes type==="musician" uniquement, pour un paquet dédié aux artistes — même
+  // logique de pondération/garantie dans les deux cas, seul le pool de départ change.
   function pickPack(packKind) {
     var rarityWeight = { commune: 0, rare: 1, super_rare: 2, ultra_rare: 3, legendaire: 4 };
     var pool = packKind === "musicians"
       ? CARDS.filter(function (c) { return c.type === "musician"; })
       : CARDS.slice();
+    var groups = groupByRarity(pool);
     var pulled = [];
-    for (var i = 0; i < PACK_SIZE; i++) {
-      pulled.push(pool[Math.floor(Math.random() * pool.length)]);
+
+    // 4 cartes "normales" selon les taux de drop (commune très majoritaire, légendaire rare)
+    for (var i = 0; i < PACK_SIZE - 1; i++) {
+      var rarity = pickWeightedRarity(groups, RARITY_DROP_WEIGHTS);
+      pulled.push(pickOneFromGroup(groups[rarity]));
     }
+
+    // 5e carte garantie : au moins rare, jamais commune (c'est elle qui ferme le paquet une
+    // fois trié par rareté croissante ci-dessous, pour l'effet suspense).
+    var guaranteedWeights = {};
+    GUARANTEED_SLOT_RARITIES.forEach(function (r) { guaranteedWeights[r] = RARITY_DROP_WEIGHTS[r]; });
+    var guaranteedRarity = pickWeightedRarity(groups, guaranteedWeights)
+      || pickWeightedRarity(groups, RARITY_DROP_WEIGHTS); // pool sans aucune carte rare+ : ne devrait pas arriver, filet de sécurité
+    pulled.push(pickOneFromGroup(groups[guaranteedRarity]));
+
     pulled.sort(function (a, b) { return rarityWeight[a.rarity] - rarityWeight[b.rarity]; });
     return pulled;
   }
