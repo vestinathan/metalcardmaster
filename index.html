@@ -280,9 +280,30 @@ body::after {
   border-radius: 8px;
   background: #0c0b0a;
 }
+/* Carte possédée : on injecte directement .rc-frame/.rc-window (même markup que la reveal-card)
+   dans ce conteneur à taille fixe 300x420 (même référence que le viewBox du cadre SVG et que
+   .stage en plein écran), puis on le réduit à la taille réelle du slot via transform:scale() posé
+   en JS (cf. populateOwnedMiniCard) — pas de redéfinition de layout en CSS, donc aucune dérive
+   possible entre la mini-card et la carte au tirage : c'est littéralement la même fiche, zoomée
+   arrière. .mc-band/.mc-inner-ring (ci-dessus) n'habillent alors plus que le très léger liseré
+   entre le bord du slot et le cadre mis à l'échelle (gouttière anti-crénelage), le vrai cadre
+   métallique visible étant celui, identique, de .rc-frame lui-même. */
+.mini-card .mc-scale {
+  position: absolute; top: 0; left: 0;
+  width: 300px; height: 420px;
+  transform-origin: top left;
+  pointer-events: none;
+}
+.mini-card .mc-scale .rc-frame { position: absolute; inset: 0; }
+/* le cadre réel vient alors de .rc-frame (mis à l'échelle ci-dessus) : .mc-band/.mc-inner-ring
+   n'ont plus lieu d'être visibles derrière, pour éviter tout artefact de bord entre les deux
+   géométries de coin (rayons légèrement différents selon la taille réelle du slot/arrondi). */
+.mini-card:has(.mc-scale) .mc-band,
+.mini-card:has(.mc-scale) .mc-inner-ring { display: none; }
 /* même composition que la reveal-card (.rc-head / .rc-photo / .rc-move-top), à échelle réduite :
    bandeau haut (badge rareté + logo), photo, bandeau nom juste sous la photo — plutôt qu'un
-   badge ruban flottant et une seule plaque en bas. */
+   badge ruban flottant et une seule plaque en bas. Ne s'applique qu'aux cartes verrouillées
+   (silhouette "???" simplifiée) — les cartes possédées utilisent .mc-scale ci-dessus. */
 .mini-card .mc-window {
   position: absolute; inset: 8px;
   border-radius: 6px;
@@ -2587,58 +2608,54 @@ body::after {
   // ResizeObserver (cf. initMetallicss plus bas dans le fichier), ce qui, multiplié par 235
   // d'un coup, faisait planter Safari mobile en scrollant (mémoire/GPU). On ne paie donc ce
   // coût que pour les cartes réellement visibles à un instant donné.
-  function populateMiniCard(el, c) {
-    if (el.dataset.populated) return;
-    el.dataset.populated = "1";
-    var owned = ownedIds.indexOf(c.id) !== -1;
-    el.className = "mini-card" + (owned ? " metallicss" : " locked");
+  // Carte possédée : on injecte exactement le même markup que la reveal-card (buildCardFrameHtml),
+  // puis on le réduit à l'échelle du slot de la grille via transform:scale() sur .mc-scale (cf.
+  // CSS) — la mini-card est donc littéralement la même fiche (PV, photo, bio, attaque), pas un
+  // résumé séparé à maintenir en double. fitCardMoves tourne aussi dessus (même garde-fou anti-
+  // débordement de bio que sur la reveal-card), borné aux cartes visibles par l'IntersectionObserver
+  // de la grille, donc jamais payé d'un coup pour les 255 cartes.
+  function populateOwnedMiniCard(el, c) {
+    el.className = "mini-card metallicss";
     el.dataset.rarity = c.rarity;
-    var initials = c.name.split(" ").map(function (w) { return w[0]; }).slice(0, 2).join("");
-    // meme garde-fou de chargement que sur la reveal-card : une image distante (Wikipedia) peut
-    // echouer cote navigateur ; onerror (attache plus bas, apres l'injection du HTML) bascule
-    // alors sur les initiales plutot que l'icone "image cassee".
-    var artHtml = (owned && c.photo)
-      ? '<img class="mc-art-img" src="' + c.photo + '" alt="" loading="lazy" decoding="async"><div class="mc-art-tint"></div>'
-      : (owned ? initials : "?");
-    // meme composition que le header de la reveal-card : badge de rarete + logo du groupe
-    var logoHtml = (owned && c.logo)
-      ? '<img class="mc-logo" src="' + c.logo + '" alt="' + c.name + '" loading="lazy" decoding="async">'
-      : "";
-    var badgeHtml = owned ? '<div class="mc-rarity-badge metallicss">' + RARITY_LABEL[c.rarity] + '</div>' : '<div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div>';
+    var built = buildCardFrameHtml(c);
+    el.innerHTML = '<div class="mc-scale">' + built.html + '</div>';
+    attachCardImageFallbacks(el, c, built);
+    // ratio = largeur réelle du slot (3 colonnes responsive) / 300px, la largeur de référence du
+    // cadre (cf. viewBox du SVG + .stage en plein écran). Posé après l'injection, une fois le
+    // slot déjà dans son layout final (la grille est en CSS grid, donc la largeur est stable dès
+    // le premier reflow — pas besoin de ResizeObserver par carte, trop coûteux à 255 cartes).
+    var scaleEl = el.querySelector(".mc-scale");
+    var ratio = el.clientWidth / 300;
+    scaleEl.style.transform = "scale(" + ratio + ")";
+    if (window.applyMetallicss) {
+      el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+    }
+    if (c.rarity === "legendaire") applyLogoHolo(el, c);
+    requestAnimationFrame(function () { fitCardMoves(el); });
+    el.addEventListener("click", function () { openCardZoom(c); });
+  }
+
+  // Carte non possédée : silhouette "???" neutre, pas la peine de construire toute la fiche TCG
+  // pour un contenu caché.
+  function populateLockedMiniCard(el, c) {
+    el.className = "mini-card locked";
+    el.dataset.rarity = c.rarity;
     el.innerHTML =
       '<div class="mc-band"></div>' +
       '<div class="mc-inner-ring"></div>' +
       '<div class="mc-window">' +
-        '<div class="mc-head">' + badgeHtml + logoHtml + '</div>' +
-        '<div class="mc-art">' + artHtml + '</div>' +
-        '<div class="mc-plate"><span class="mc-name">' + (owned ? c.name : "???") + '</span></div>' +
+        '<div class="mc-head"><div class="mc-rarity-badge">' + RARITY_LABEL[c.rarity] + '</div></div>' +
+        '<div class="mc-art">?</div>' +
+        '<div class="mc-plate"><span class="mc-name">???</span></div>' +
       '</div>';
-    var artImgEl = el.querySelector(".mc-art-img");
-    if (artImgEl) {
-      artImgEl.addEventListener("error", function () {
-        var artContainer = el.querySelector(".mc-art");
-        if (artContainer) artContainer.innerHTML = initials;
-      }, { once: true });
-    }
-    var logoImgElGrid = el.querySelector(".mc-logo");
-    if (logoImgElGrid) {
-      logoImgElGrid.addEventListener("error", function () {
-        logoImgElGrid.remove();
-      }, { once: true });
-    }
-    // La lib metallicss ne scanne ".metallicss" qu'au chargement de la page (DOMContentLoaded) ;
-    // elle ne détecte pas les éléments créés/peuplés dynamiquement ensuite. On l'appelle donc
-    // nous-mêmes sur cette carte précise, si elle a bien chargé (cf. script en fin de fichier).
-    if (window.applyMetallicss) {
-      el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
-    }
-    // même teinte --holo-a/b/c que sur la reveal-card (cf. applyLogoHolo plus bas) : un petit
-    // échantillonnage canvas 64x64, négligeable même répété sur les ~13 légendaires de la grille,
-    // pour que la bande dorée du mini-card reflète la vraie couleur du groupe comme au tirage.
-    if (owned && c.rarity === "legendaire") applyLogoHolo(el, c);
-    if (owned) {
-      el.addEventListener("click", function () { openCardZoom(c); });
-    }
+  }
+
+  function populateMiniCard(el, c) {
+    if (el.dataset.populated) return;
+    el.dataset.populated = "1";
+    var owned = ownedIds.indexOf(c.id) !== -1;
+    if (owned) populateOwnedMiniCard(el, c);
+    else populateLockedMiniCard(el, c);
   }
 
   // ---- Vue agrandie d'une carte depuis la collection (meme design que l'ouverture de pack,
@@ -2998,10 +3015,12 @@ body::after {
     img.src = card.logo;
   }
 
-  function buildRevealCard(card, onTap) {
-    var el = document.createElement("div");
-    el.className = "reveal-card";
-    el.dataset.rarity = card.rarity;
+  // Construit le markup intérieur d'une fiche carte (cadre + fenêtre + header PV + photo + bio +
+  // attaque), identique que ce soit pour la reveal-card plein écran ou la mini-card de l'Album :
+  // une seule source de vérité pour la structure, pour que les deux soient visuellement la même
+  // carte à une échelle différente plutôt que deux designs à maintenir en parallèle. Retourne le
+  // HTML et les deux garde-fous de chargement (photo/logo) à attacher après injection.
+  function buildCardFrameHtml(card) {
     // disposition "fiche TCG" : header (nom/genre + PV=influence), art, attaque (titre phare + annee),
     // bio courte a la place de la 2e attaque, pied (rarete + pays/vues).
     // sans photo reelle : fond genere a partir de la palette du genre (coherent avec le logo
@@ -3033,7 +3052,7 @@ body::after {
     // metallicss + l'habillage holographique ; les autres raretes ont un cadre classique sobre
     // (degrade sombre teinte + grain + coins ornementaux, en CSS pur sur .rc-frame).
     var frameClass = card.rarity === "legendaire" ? "rc-frame metallicss" : "rc-frame";
-    el.innerHTML =
+    var html =
       '<div class="' + frameClass + '">' +
       '<div class="rc-window">' +
         '<div class="rc-head">' +
@@ -3065,26 +3084,36 @@ body::after {
         '<div class="rc-atk"><span class="rc-atk-lbl">ATK</span><span class="rc-atk-num">' + Math.round(card.influence / 5) + '</span></div>' +
       '</div>' +
       '</div>';
+    return { html: html, fallbackPhotoHtml: fallbackPhotoHtml, generatedLogoSrc: generatedLogoSrc };
+  }
 
-    // garde-fou de chargement : une image distante (card.photo via Wikipedia, ou un card.logo
-    // reel futur) peut echouer cote navigateur meme apres une reponse API correcte (image
-    // retiree depuis, hotlink bloque, etc.). On bascule alors sur le fallback genere plutot que
-    // de laisser l'icone "image cassee" du navigateur visible sur la carte.
+  // Attache les garde-fous de chargement image (photo/logo distants) sur une carte déjà injectée
+  // dans le DOM — partagé entre reveal-card et mini-card.
+  function attachCardImageFallbacks(el, card, built) {
     var photoImgEl = el.querySelector(".rc-photo-img");
     if (photoImgEl) {
       photoImgEl.addEventListener("error", function () {
         var photoContainer = el.querySelector(".rc-photo");
-        if (photoContainer) photoContainer.innerHTML = fallbackPhotoHtml;
+        if (photoContainer) photoContainer.innerHTML = built.fallbackPhotoHtml;
       }, { once: true });
     }
     if (card.logo) {
       var logoImgEl = el.querySelector(".rc-head-logo");
       if (logoImgEl) {
         logoImgEl.addEventListener("error", function () {
-          logoImgEl.src = generatedLogoSrc;
+          logoImgEl.src = built.generatedLogoSrc;
         }, { once: true });
       }
     }
+  }
+
+  function buildRevealCard(card, onTap) {
+    var el = document.createElement("div");
+    el.className = "reveal-card";
+    el.dataset.rarity = card.rarity;
+    var built = buildCardFrameHtml(card);
+    el.innerHTML = built.html;
+    attachCardImageFallbacks(el, card, built);
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
     function applyTilt(dx, dy) {
