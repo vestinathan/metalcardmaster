@@ -2999,6 +2999,24 @@ body::after {
   // logique de pondération/garantie dans les deux cas, seul le pool de départ change.
   function pickPack(packKind) {
     var rarityWeight = { commune: 0, rare: 1, ultra_rare: 2, legendaire: 3 };
+
+    // Hook debug (console uniquement, pas d'UI) : window.__forcePack = ["id1","id2",...]
+    // force le tirage sur ces ids exacts (dans cet ordre, puis re-triés par rareté comme un
+    // paquet normal) au lieu du tirage pondéré, pour visualiser l'animation d'ouverture avec
+    // des cartes précises. Ne modifie pas la logique de tirage normale ; s'auto-consomme (se
+    // remet à null après usage) pour ne pas fausser les paquets suivants par erreur.
+    if (window.__forcePack && window.__forcePack.length) {
+      var forcedIds = window.__forcePack;
+      window.__forcePack = null;
+      var byId = {};
+      CARDS.forEach(function (c) { byId[c.id] = c; });
+      var forced = forcedIds.map(function (id) { return byId[id]; }).filter(Boolean);
+      if (forced.length) {
+        forced.sort(function (a, b) { return rarityWeight[a.rarity] - rarityWeight[b.rarity]; });
+        return forced;
+      }
+    }
+
     var pool = packKind === "musicians"
       ? CARDS.filter(function (c) { return c.type === "musician"; })
       : CARDS.slice();
