@@ -1013,28 +1013,109 @@ body::after {
   62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
-/* Légendaire : même geste (apparition de profil -90deg, pivot, pose) mais étiré (1.9s au lieu de
-   1.1s standard). Le pivot (passage de -90deg à 0deg) doit être long et "vibrant" plutôt qu'un
-   saut rapide : il occupe l'essentiel de la timeline (8%-92%) et traverse plusieurs paliers de
-   rotation (-90 → -55 → -25 → -8 → 0, avec un léger overshoot -4deg avant la pose finale) au lieu
-   d'une seule interpolation lissée, pour un vrai tourbillon qui ralentit en approchant de la face.
-   3.2s testé puis jugé trop long (bloquait l'enchaînement tap-pour-carte-suivante) : ramené à
-   1.9s, qui garde le ressenti "vibrant" (toutes les proportions ci-dessous et plus bas, flash et
-   secousse, sont en %, donc suivent automatiquement ce changement de durée totale). */
-.reveal-card[data-rarity="legendaire"].flipping { animation-name: cardFlipInLegend; animation-duration: 1.9s; }
-@keyframes cardFlipInLegend {
-  0% { opacity: 0; transform: rotateY(-90deg) scale(0.86); }
-  8% { opacity: 1; transform: rotateY(-90deg) scale(0.88); }
-  20% { transform: rotateY(-78deg) scale(0.89); }
-  32% { transform: rotateY(-62deg) scale(0.9); }
-  44% { transform: rotateY(-46deg) scale(0.91); }
-  56% { transform: rotateY(-31deg) scale(0.93); }
-  67% { transform: rotateY(-18deg) scale(0.95); }
-  77% { transform: rotateY(-9deg) scale(0.96); }
-  85% { transform: rotateY(-3deg) scale(0.98); }
-  91% { transform: rotateY(4deg) scale(0.99); }
-  96% { transform: rotateY(-1.5deg) scale(1); }
-  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+/* Légendaire : abandon du flip rotateY au profit d'un voile de fumée qui masque la carte puis se
+   dissipe pour la révéler — demande explicite, le flip (même ralenti/vibrant) restait perçu comme
+   trop lent/mécanique. La carte elle-même reste fixe (simple fondu + très léger scale, pas de
+   rotation) : c'est .rc-smoke-veil (cf. plus bas) qui joue toute la dramaturgie du reveal. */
+.reveal-card[data-rarity="legendaire"].flipping { animation: cardRevealLegend 1.9s ease-out both; }
+@keyframes cardRevealLegend {
+  0% { opacity: 0; transform: scale(0.97); }
+  12% { opacity: 1; transform: scale(0.99); }
+  100% { opacity: 1; transform: scale(1); }
+}
+/* Voile de fumée : plusieurs couches de radial-gradient sombre/doré, chacune avec son propre
+   décalage et sa propre durée de dissipation (cf. .rc-smoke-1/2/3 plus bas), pour un effet
+   organique plutôt qu'un simple fondu uniforme — certaines zones se dissipent plus vite que
+   d'autres, comme de vrais nuages qui se déchirent. Les couches dérivent légèrement vers le haut
+   en se dissipant (translateY négatif), jamais statiques. Seul un .reveal-card[data-rarity=
+   "legendaire"] reçoit ce voile (cf. le HTML injecté par buildRevealCard) ; inerte/invisible tant
+   que .flipping n'est pas posée. */
+.rc-smoke-veil {
+  position: absolute; inset: -6%;
+  z-index: 11;
+  border-radius: 10px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+/* opacity fixe à 1 pendant toute la durée : ce sont les couches enfants (.rc-smoke-0/1/2/3,
+   chacune avec sa propre dissipation) qui gèrent tout le dégagement progressif — pas de fondu
+   sur le conteneur lui-même, qui créerait de la transparence précoce par-dessus un voile déjà
+   partiellement transparent sur les bords. */
+.reveal-card[data-rarity="legendaire"].flipping .rc-smoke-veil { opacity: 1; }
+.rc-smoke-layer {
+  position: absolute; inset: -20%;
+  background-repeat: no-repeat;
+}
+/* .rc-smoke-0 : fond plein (pas un gradient dégradé vers transparent, un vrai aplat opaque) —
+   sans cette couche, les radial-gradients texturés des couches 1-3 ci-dessous, décentrés et
+   dégradés vers transparent sur leurs bords, laissent voir la carte par endroits dès le début
+   (bug constaté : la carte restait lisible en transparence à travers le voile dès les premières
+   100ms). Cette couche garantit un masquage total au départ ; c'est elle qui porte l'essentiel
+   de la dissipation finale (cf. smokeDrift0), les couches 1-3 ne faisant qu'ajouter du relief/
+   texture par-dessus pendant que 0 est encore pleine.
+   .rc-smoke-1/2/3 : couches ensuite pour la texture (radial-gradients décentrés, dissipation
+   échelonnée dans le temps) qui donnent le caractère "nuages qui se déchirent" plutôt qu'un
+   simple fondu uniforme. */
+.rc-smoke-0 {
+  background-color: #0a0704;
+  background-image: radial-gradient(ellipse 90% 80% at 50% 45%, color-mix(in srgb, var(--alloy-legend-a) 22%, #0a0704) 0%, #0a0704 70%);
+}
+.rc-smoke-1 {
+  background-image:
+    radial-gradient(ellipse 55% 45% at 22% 30%, color-mix(in srgb, var(--alloy-legend-a) 55%, #1a1308) 0%, color-mix(in srgb, var(--alloy-legend-a) 30%, #1a1308 70%) 45%, transparent 72%),
+    radial-gradient(ellipse 60% 50% at 78% 70%, #0d0905 0%, #0d0905cc 50%, transparent 75%);
+}
+.rc-smoke-2 {
+  background-image:
+    radial-gradient(ellipse 50% 60% at 68% 24%, color-mix(in srgb, var(--alloy-legend-b) 50%, #140f08) 0%, transparent 70%),
+    radial-gradient(ellipse 65% 45% at 30% 78%, #110d07 0%, transparent 75%);
+}
+.rc-smoke-3 {
+  background-image:
+    radial-gradient(ellipse 80% 70% at 50% 50%, #0a0704 0%, #0a0704 35%, transparent 68%);
+}
+/* Les animations ne sont posées QUE sous [data-rarity="legendaire"].flipping : sans ce scope,
+   les couches de fumée (présentes dans le HTML de toute reveal-card, cf. buildRevealCard) se
+   mettaient à jouer sur CHAQUE carte (commune/rare incluses), bug constaté via une trace
+   animationstart montrant smokeDrift0/1/2/3 démarrer dès la première carte commune. Résultat
+   concret : au moment où la vraie carte légendaire apparaissait, les couches avaient déjà tourné
+   plusieurs fois et redémarraient depuis un état déjà "sale", d'où le voile qui semblait se
+   dissiper bien plus vite que les 1.9s configurées. */
+.reveal-card[data-rarity="legendaire"].flipping .rc-smoke-0 { animation: smokeDrift0 1.9s ease-in both; }
+.reveal-card[data-rarity="legendaire"].flipping .rc-smoke-1 { animation: smokeDrift1 1.9s ease-out both; }
+.reveal-card[data-rarity="legendaire"].flipping .rc-smoke-2 { animation: smokeDrift2 1.9s ease-out both; }
+.reveal-card[data-rarity="legendaire"].flipping .rc-smoke-3 { animation: smokeDrift3 1.9s ease-out both; }
+/* La couche opaque (0) reste pleine le plus longtemps (jusqu'à ~45% de la timeline) puis se
+   dissipe sur une plage large (45%-95%) pour un dégagement progressif et non un cut brutal.
+   Les couches texturées (1-3) commencent à se dissiper plus tôt et plus vite, pour qu'il y ait
+   du mouvement/relief visible pendant que 0 masque encore l'essentiel. */
+@keyframes smokeDrift0 {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  45% { opacity: 1; transform: translateY(-1%) scale(1.02); }
+  75% { opacity: 0.4; transform: translateY(-7%) scale(1.08); }
+  95% { opacity: 0; transform: translateY(-12%) scale(1.13); }
+  100% { opacity: 0; transform: translateY(-12%) scale(1.13); }
+}
+@keyframes smokeDrift1 {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  38% { opacity: 1; transform: translateY(-2%) scale(1.03); }
+  75% { opacity: 0.15; transform: translateY(-9%) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-13%) scale(1.14); }
+}
+@keyframes smokeDrift2 {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  30% { opacity: 1; transform: translateY(-1%) scale(1.02); }
+  68% { opacity: 0.2; transform: translateY(-8%) scale(1.08); }
+  92% { opacity: 0; transform: translateY(-12%) scale(1.12); }
+  100% { opacity: 0; transform: translateY(-12%) scale(1.12); }
+}
+@keyframes smokeDrift3 {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  58% { opacity: 0.25; transform: translateY(-6%) scale(1.06); }
+  85% { opacity: 0; transform: translateY(-11%) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-11%) scale(1.1); }
 }
 .rc-flip-flash {
   position: absolute; inset: -4%;
@@ -1056,60 +1137,23 @@ body::after {
   78% { opacity: 0; }
   100% { opacity: 0; }
 }
-/* Légendaire : le flip standard ci-dessus reste identique (même timing, même tranche), mais le
-   flash devient doré et plus intense/étalé (teinte --alloy-legend-a au lieu de blanc pur, pic
-   plus large et plus opaque), et .stage tremble juste après le retournement — un vrai "impact"
-   pour le tirage le plus rare plutôt qu'un simple sursaut lumineux comme les autres raretés. */
+/* Légendaire : plus de pivot rotateY (remplacé par le voile de fumée ci-dessus), donc le flash
+   n'accompagne plus un "retournement" mais le moment où la fumée se déchire le plus — recalé sur
+   la fenêtre où .rc-smoke-veil perd l'essentiel de son opacité (cf. smokeVeilFade/smokeDrift*,
+   grosso modo 40%-85% de la timeline), pour que l'éclat doré coïncide avec la carte qui émerge
+   réellement plutôt qu'avec un pivot qui n'existe plus. */
 .reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash {
   background: radial-gradient(ellipse 75% 75% at 50% 50%, color-mix(in srgb, var(--alloy-legend-a) 85%, white) 0%, color-mix(in srgb, var(--alloy-legend-a) 60%, transparent) 55%, transparent 75%);
   animation-name: cardFlipFlashLegend;
   animation-duration: 1.9s;
 }
-/* recalé sur le nouveau pivot étalé de cardFlipInLegend : la carte est de profil le plus fin vers
-   85-91% de la timeline (cf. keyframes ci-dessus), donc le pic du flash est repoussé vers cette
-   fraction au lieu du milieu, pour culminer pile quand la carte est tranche-sur-tranche — le
-   moment le plus dramatique du retournement. */
 @keyframes cardFlipFlashLegend {
-  0%, 55% { opacity: 0; }
-  72% { opacity: 0.6; }
-  85% { opacity: 1; }
-  91% { opacity: 1; }
-  97% { opacity: 0.3; }
+  0%, 35% { opacity: 0; }
+  50% { opacity: 0.7; }
+  62% { opacity: 1; }
+  74% { opacity: 0.8; }
+  90% { opacity: 0; }
   100% { opacity: 0; }
-}
-/* La secousse dure maintenant quasi toute la durée du pivot (cf. le setTimeout plus bas, déclenché
-   dès 8% de cardFlipInLegend plutôt qu'à son pivot) : au lieu d'un unique "impact" ponctuel après
-   coup, .stage vibre PENDANT tout le retournement — c'est le "vibrant" demandé. Secousse plus fine
-   et resserrée (petites oscillations rapides) plutôt qu'un gros aller-retour, pour rester lisible
-   sur une durée longue sans donner le mal de mer. */
-.stage.legendary-shake { animation: legendShake 1.57s cubic-bezier(.45,0,.55,1) both; }
-@keyframes legendShake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  4% { transform: translate(-2px, 1px) rotate(-0.4deg); }
-  8% { transform: translate(2px, -1px) rotate(0.4deg); }
-  12% { transform: translate(-2px, 1px) rotate(-0.35deg); }
-  16% { transform: translate(2px, -1px) rotate(0.35deg); }
-  20% { transform: translate(-2px, 1px) rotate(-0.3deg); }
-  24% { transform: translate(2px, -1px) rotate(0.3deg); }
-  28% { transform: translate(-1.5px, 1px) rotate(-0.3deg); }
-  32% { transform: translate(1.5px, -1px) rotate(0.3deg); }
-  36% { transform: translate(-1.5px, 1px) rotate(-0.25deg); }
-  40% { transform: translate(1.5px, -1px) rotate(0.25deg); }
-  44% { transform: translate(-1.5px, 1px) rotate(-0.25deg); }
-  48% { transform: translate(1.5px, -1px) rotate(0.25deg); }
-  52% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
-  56% { transform: translate(1px, -0.5px) rotate(0.2deg); }
-  60% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
-  64% { transform: translate(1px, -0.5px) rotate(0.2deg); }
-  68% { transform: translate(-1px, 0.5px) rotate(-0.15deg); }
-  72% { transform: translate(1px, -0.5px) rotate(0.15deg); }
-  76% { transform: translate(-3px, 2px) rotate(-0.7deg); }
-  80% { transform: translate(4px, -2px) rotate(0.8deg); }
-  84% { transform: translate(-3px, 1.5px) rotate(-0.6deg); }
-  88% { transform: translate(2px, -1px) rotate(0.4deg); }
-  92% { transform: translate(-1px, 0.5px) rotate(-0.2deg); }
-  96% { transform: translate(0.5px, -0.3px) rotate(0.1deg); }
-  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 /* cadre — vrai encadrement épais façon carte à collectionner (type Pokémon TCG) : bordure en
@@ -1493,12 +1537,13 @@ body::after {
   .reveal-card[data-rarity="legendaire"].flipping { animation: none; }
   .reveal-card.flipping .rc-flip-flash,
   .reveal-card[data-rarity="legendaire"].flipping .rc-flip-flash { animation: none; }
+  .reveal-card[data-rarity="legendaire"].flipping .rc-smoke-veil,
+  .reveal-card[data-rarity="legendaire"].flipping .rc-smoke-layer { animation: none; opacity: 0; }
   .pack-closed.tearing-done .pc-top, .pack-closed.tearing-done .pc-bottom { transition: none; opacity: 0; }
   .tear-flash.flashing { animation: none; }
   .reveal-card[data-rarity="legendaire"] .rc-frame,
   .reveal-card[data-rarity="legendaire"] .rc-frame::after,
   .reveal-card[data-rarity="legendaire"] .rc-window::after { animation: none; }
-  .stage.legendary-shake { animation: none; }
 }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3269,27 +3314,11 @@ body::after {
       // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
       // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
       el.addEventListener("animationend", function onFlipEnd(e) {
-        if (e.animationName === "cardFlipIn" || e.animationName === "cardFlipInLegend") {
+        if (e.animationName === "cardFlipIn" || e.animationName === "cardRevealLegend") {
           el.classList.remove("flipping");
           el.removeEventListener("animationend", onFlipEnd);
         }
       });
-      // Légendaire : .stage vibre PENDANT tout le retournement, pas juste un sursaut après coup.
-      // cardFlipInLegend (1.9s) fait tenir son pivot de rotation sur 8%-92% de la timeline, donc
-      // la secousse (durée 1.57s, cf. @keyframes legendShake) démarre dès 8% (~152ms) pour courir
-      // en parallèle du pivot et se calmer en même temps que la carte se stabilise face à
-      // l'écran. setTimeout plutôt qu'un animationend sur une 2e keyframe : on veut déclencher à
-      // un instant précis de l'animation en cours, pas à sa fin. classList.remove avant re-add
-      // au cas où un paquet précédent aurait laissé la classe (improbable vu le timeout court,
-      // mais coûte rien de le garder robuste à un double-tap rapide sur deux légendaires
-      // d'affilée).
-      if (card.rarity === "legendaire") {
-        setTimeout(function () {
-          stage.classList.remove("legendary-shake");
-          void stage.offsetWidth; // force un reflow pour que le re-add relance bien l'animation
-          stage.classList.add("legendary-shake");
-        }, 152);
-      }
     });
     tapHint.hidden = false;
   }
@@ -3467,7 +3496,17 @@ body::after {
     var built = buildCardFrameHtml(card);
     // .rc-flip-flash : enfant dédié au flash lumineux de l'animation .flipping (cf. CSS), inerte
     // et invisible (opacity:0) tant que cette classe n'est pas posée par nextCard()/openCardZoom.
-    el.innerHTML = built.html + '<div class="rc-flip-flash"></div>';
+    // .rc-smoke-veil (3 couches .rc-smoke-1/2/3) : uniquement actif/visible sur une carte
+    // légendaire (cf. sélecteur [data-rarity="legendaire"] en CSS) ; inoffensif sur les autres
+    // raretés, où il reste en display normal mais opacity:0 (aucun .flipping ne le déclenche).
+    el.innerHTML = built.html +
+      '<div class="rc-flip-flash"></div>' +
+      '<div class="rc-smoke-veil">' +
+        '<div class="rc-smoke-layer rc-smoke-0"></div>' +
+        '<div class="rc-smoke-layer rc-smoke-1"></div>' +
+        '<div class="rc-smoke-layer rc-smoke-2"></div>' +
+        '<div class="rc-smoke-layer rc-smoke-3"></div>' +
+      '</div>';
     attachCardImageFallbacks(el, card, built);
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
