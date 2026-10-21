@@ -141,52 +141,17 @@ body::after {
   z-index: 1;
 }
 
-/* ---------- Header — pilule de verre liquide flottante (Liquid Glass) ---------------------
-   Détachée des bords de l'écran plutôt que collée pleine largeur : coins très arrondis,
-   fort blur derrière, liseré lumineux fin qui capte la "lumière" en haut, léger reflet
-   spéculaire diagonal en overlay, ombre portée douce qui la fait flotter au-dessus du
-   contenu. Le wordmark + les coins très ronds + la transparence sont ce qui porte l'effet
-   verre ; le fond reste sombre (cohérent avec la texture dirt en dessous). */
+/* ---------- Header — logo seul, sans habillage visuel autour (pas de pilule de verre, pas
+   de fond ni de bordure) : juste le wordmark posé directement sur le fond de l'app. ---------- */
 .topbar {
   position: sticky;
   top: calc(10px + env(safe-area-inset-top, 0px));
   z-index: 10;
   margin: calc(10px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-left, 0px)) 18px max(14px, env(safe-area-inset-right, 0px));
   padding: 14px 20px;
-  border-radius: 26px;
-  background:
-    linear-gradient(155deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 30%, rgba(255,255,255,0) 55%),
-    color-mix(in srgb, var(--surface) 62%, transparent);
-  backdrop-filter: blur(22px) saturate(1.4);
-  -webkit-backdrop-filter: blur(22px) saturate(1.4);
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.3),
-    0 18px 34px -16px rgba(0,0,0,0.65),
-    0 2px 10px -4px rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-}
-.topbar::before {
-  /* reflet spéculaire diagonal — bande de lumière douce qui traverse le verre en haut,
-     façon surface incurvée qui capte une source lumineuse */
-  content: "";
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: linear-gradient(115deg,
-    transparent 0%, transparent 38%,
-    rgba(255,255,255,0.10) 48%,
-    rgba(255,255,255,0.16) 52%,
-    rgba(255,255,255,0.10) 56%,
-    transparent 66%, transparent 100%);
-}
-.topbar::after {
-  content: "";
-  position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  opacity: 0.08; mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 /* Wordmark = logo fourni par l'utilisateur (dessiné dans Figma, police HeavyTal),
    intégré en image plutôt qu'en @font-face : le rendu vectoriel de Figma gère
