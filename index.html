@@ -2900,7 +2900,12 @@ body::after {
   // débordement de bio que sur la reveal-card), borné aux cartes visibles par l'IntersectionObserver
   // de la grille, donc jamais payé d'un coup pour les 255 cartes.
   function populateOwnedMiniCard(el, c) {
-    el.className = "mini-card metallicss";
+    // metallicss sur le conteneur .mini-card lui-même réservé aux légendaires (aligné sur
+    // buildCardFrameHtml, qui ne pose plus "rc-frame metallicss" que pour cette rareté) : garde
+    // l'effet comme marqueur de rareté exceptionnelle plutôt qu'une texture appliquée partout, et
+    // réduit d'autant le nombre de rendus SVG coûteux simultanés dans la grille (sensible côté
+    // mémoire GPU, cf. le fix crash Safari).
+    el.className = c.rarity === "legendaire" ? "mini-card metallicss" : "mini-card";
     el.dataset.rarity = c.rarity;
     var built = buildCardFrameHtml(c);
     var qty = ownedCount(c.id);
@@ -3481,11 +3486,12 @@ body::after {
     // relief metallicss sur la pastille de rarete, sauf commune (pas de texture pour le palier le plus bas)
     var rarityLabelClass = card.rarity === "commune" ? "rc-rarity-label" : "rc-rarity-label metallicss";
     // cadre : .rc-frame contient .rc-window a l'interieur de son padding, comme un vrai encadrement
-    // de carte a collectionner plutot qu'un simple filet. Le relief metallicss s'applique a toutes
-    // les raretes (alignee sur la grille de collection, cf. populateOwnedMiniCard qui pose
-    // "mini-card metallicss" sans distinction de rarete) ; seule la Legendaire ajoute par-dessus
-    // l'habillage holographique (cf. applyLogoHolo plus bas).
-    var frameClass = "rc-frame metallicss";
+    // de carte a collectionner plutot qu'un simple filet. Seule la Legendaire garde le relief
+    // metallicss + l'habillage holographique (cf. applyLogoHolo plus bas) — choix explicite pour
+    // que l'effet reste un marqueur de rarete exceptionnelle plutot qu'une texture generalisee ;
+    // les autres raretes ont un cadre classique sobre (degrade sombre teinte + grain + coins
+    // ornementaux, en CSS pur sur .rc-frame, cf. les regles par rarete plus bas).
+    var frameClass = card.rarity === "legendaire" ? "rc-frame metallicss" : "rc-frame";
     var html =
       '<div class="' + frameClass + '">' +
       '<div class="rc-window">' +
