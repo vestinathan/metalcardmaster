@@ -883,7 +883,7 @@ body::after {
    cartes communes, une tranche holographique à larges bandes de couleur diagonales (pas de petits
    éclats, de vraies bandes continues façon film prismatique) pour une carte rare/légendaire tout
    au fond de la pile. Jamais le contenu réel de ces cartes, seulement leur chant.
-   Un .rc-next-card par carte restante (jusqu'à NEXT_STACK_MAX, cf. JS), empilé en DOM dans
+   Un .rc-next-card par carte restante du paquet (pas de plafond, cf. JS), empilé en DOM dans
    l'ordre du paquet (la toute prochaine carte en premier/dessus). Éléments frères de .reveal-card (pas
    enfants : doivent rester fixes, ne pas suivre le rotateY du tilt), positionnés en pixels réels
    par le JS (left/width, cf. applyTilt) pour dépasser fidèlement du bord quelle que soit la
@@ -933,6 +933,12 @@ body::after {
   cursor: default;
 }
 .rc-next-card-spine .rc-frame { position: absolute; inset: 0; }
+/* À cette échelle de recadrage (quelques px de large, zoomés d'autant à l'écran), .rc-window
+   (photo/logo/en-tête réels de la carte, nichée dans le padding de .rc-frame, cf. CSS) ne doit
+   JAMAIS être visible — seul le cadre lui-même (liseré + bande de rareté + anneau) représente le
+   "chant" de la carte dans la pile. Sans cette règle, une fenêtre assez large pour dépasser le
+   padding du cadre laisse déborder un fragment de la vraie photo/logo générés de la carte. */
+.rc-next-card-spine .rc-window { visibility: hidden; }
 
 /* paquet fermé — même habillage chromé que les boosters de l'étagère (silhouette galbée
    mesurée, bandes chromées à cannelures, logo + "5 cartes" + nom d'édition). Le fond passe
@@ -3700,11 +3706,6 @@ body::after {
     }
   }
 
-  // Nombre maximum de tranches de cartes restantes affichées dans la pile (au-delà, le paquet
-  // réel peut contenir plus de cartes que ce qui est montré — cf. référence Pokémon TCG Pocket
-  // où seules 2-3 tranches sont visibles même si plus de cartes restent).
-  var NEXT_STACK_MAX = 3;
-
   function buildRevealCard(card, onTap, upcomingCards) {
     var el = document.createElement("div");
     el.className = "reveal-card";
@@ -3731,13 +3732,16 @@ body::after {
     // doivent rester fixes, ne pas suivre le rotateY du tilt), insérés juste avant elle dans
     // .stage. upcomingCards = cartes du paquet après celle-ci, dans l'ordre (la toute prochaine
     // en premier) ; absent/vide sur la vue zoom collection ou la dernière carte du paquet, rien
-    // à prévisualiser. On plafonne à NEXT_STACK_MAX tranches visibles, la première (dessus de
-    // la pile, --stack-depth 0) étant la vraie carte suivante, chacune montrant le bord RÉEL de
-    // cette carte précise (clone de buildCardFrameHtml, recadré — cf. .rc-next-card-spine en CSS
-    // et le positionnement dans applyTilt plus bas).
+    // à prévisualiser. TOUTES les cartes restantes sont représentées par une tranche (pas de
+    // plafond arbitraire — la règle du jeu est de montrer le vrai paquet qui reste), la première
+    // (dessus de la pile, --stack-depth 0) étant la vraie carte suivante, chacune montrant le
+    // bord RÉEL de cette carte précise (clone de buildCardFrameHtml, recadré — cf.
+    // .rc-next-card-spine en CSS et le positionnement dans applyTilt plus bas). PACK_SIZE (cf.
+    // plus haut) borne déjà le nombre de cartes par paquet (donc le nombre de tranches ici), pas
+    // besoin d'un second plafond.
     var nextCardEls = [];
     if (upcomingCards && upcomingCards.length) {
-      var stackCards = upcomingCards.slice(0, NEXT_STACK_MAX);
+      var stackCards = upcomingCards;
       // Construites en DOM dans l'ordre inverse (la plus profonde d'abord) pour que la carte
       // suivante immédiate se retrouve la plus proche de la carte active en z-index naturel ;
       // el._nextCards garde l'ordre "dessus d'abord" pour l'appelant (nextCard()).
@@ -3805,7 +3809,17 @@ body::after {
         var amount = Math.max(-1, Math.min(1, dx / 90));
         var progress = Math.min(1, Math.abs(amount) * 1.4);
         var cardW = el.offsetWidth;
-        var SLICE_W = 10;
+        // Largeur de fenêtre assez généreuse pour couvrir le vrai coin physique de la carte
+        // (liseré noir extérieur + bande colorée de rareté + anneau noir intérieur, cf.
+        // buildCardFrameHtml, ~22/300e de la largeur réelle d'une carte) plutôt qu'un simple filet
+        // de quelques pixels qui ne montrait que le liseré noir (invisible sur fond de scène
+        // noir) — cf. commentaire sur spineOffset plus bas. Au-delà du padding de .rc-frame
+        // (14px, cf. CSS) la fenêtre déborde sur .rc-window (photo/logo/en-tête de la carte) ;
+        // plutôt que réduire toute la largeur (ce qui faisait retomber la fenêtre quasi
+        // exclusivement dans le liseré noir, invisible sur fond de scène noir), le clone masque
+        // désormais son propre .rc-window à cette échelle (cf. .rc-next-card-spine .rc-window en
+        // CSS) pour ne jamais montrer le contenu réel d'une carte — seulement son chant.
+        var SLICE_W = Math.round(cardW * (22 / 300));
         var SLICE_STEP = 6;
         nextCardEls.forEach(function (slice, depth) {
           // chaque tranche plus profonde sort légèrement après la précédente (stagger), pour que
@@ -3820,26 +3834,21 @@ body::after {
           // .rc-next-card-spine est le clone PLEINE TAILLE de la carte (cf. construction plus
           // haut), positionné en absolu À L'INTÉRIEUR de la fenêtre .rc-next-card (son propre
           // conteneur de positionnement, donc en coordonnées LOCALES à cette fenêtre, 0 = bord
-          // gauche de la fenêtre — indépendant de windowLeft). On veut que le MÊME bord que celui
-          // qu'on découvre sur la carte active (droit si amount>0 — la fenêtre dépasse à gauche de
-          // la carte active, donc montre le bord DROIT de la suivante ; gauche sinon) tombe pile
-          // dans cette fenêtre.
-          // Le tout premier pixel du cadre réel (x=0 cote SVG viewBox 300x420, cf.
-          // buildCardFrameHtml/clipOuterRing) est un simple liseré noir de ~9/300e de la largeur,
-          // AVANT la bande colorée de rareté (rect x=9..291, cf. regles CSS .rc-frame par
-          // rarete) — centrer la fenetre de recadrage pile sur x=0 ne montre donc que ce liseré
-          // noir sur fond de scene noir (invisible) au lieu de la vraie couleur de la carte,
-          // constat fait en comparant les tranches "rare" (invisibles) a la legendaire (visible,
-          // seule a utiliser un degrade plein des x=0 au lieu d'un rect+liseré). Fenetre calée sur
-          // le MILIEU de la bande colorée (~15.5/300e de cardW, cf. rect x=9 w=282 => centre a
-          // x=150, mais vu de tres pres/recadré on vise le milieu du LISERE+bande proche du bord,
-          // pas le centre de la carte) plutôt que sur le bord physique strict.
-          var EDGE_BAND_CENTER_RATIO = 15.5 / 300;
-          var bandCenterX = amount > 0
-            ? cardW * (1 - EDGE_BAND_CENTER_RATIO)
-            : cardW * EDGE_BAND_CENTER_RATIO;
+          // gauche de la fenêtre — indépendant de windowLeft). On veut vraiment le COIN PHYSIQUE
+          // de la carte suivante, dans le sens du glissement (glisser à GAUCHE, amount<0, révèle
+          // le bord DROIT des cartes qui restent à découvrir ; glisser à DROITE, amount>0, révèle
+          // leur bord GAUCHE — paquet dont toutes les cartes gardent la même orientation, jamais
+          // inversée, cf. retour utilisateur) : bord droit du clone (x=cardW en coordonnées du
+          // clone) aligné sur le bord droit de la fenêtre (x=edgeW en coordonnées locales) =>
+          // spineOffset = edgeW - cardW ; bord gauche du clone (x=0) aligné sur le bord gauche de
+          // la fenêtre (x=0) => spineOffset = 0.
+          // SLICE_W (ci-dessus) est volontairement assez large (cf. plus haut) pour que cette
+          // fenêtre couvre tout le coin réel — liseré noir extérieur (~9/300e), bande colorée de
+          // rareté, anneau noir intérieur (cf. buildCardFrameHtml/clipOuterRing+clipBand) — plutôt
+          // que seulement les tout premiers pixels du liseré noir (quasi invisible sur fond de
+          // scène noir à largeur de fenêtre trop étroite).
           slice.style.setProperty("--spine-card-w", cardW + "px");
-          var spineOffset = edgeW / 2 - bandCenterX;
+          var spineOffset = amount < 0 ? (edgeW - cardW) : 0;
           slice.firstChild.style.setProperty("--spine-offset", spineOffset + "px");
         });
       }
