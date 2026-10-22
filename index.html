@@ -874,6 +874,43 @@ body::after {
   perspective: 1000px;
 }
 
+/* Pile des cartes restant à découvrir, aperçue en bordure derrière la carte en cours de reveal
+   (même geste que sur les TCG mobiles type Pokémon TCG Pocket : on sent l'épaisseur du paquet
+   diminuer carte après carte). Conteneur inert (hors flux, z-index négatif) rempli en JS par
+   startOpening()/nextCard() avec un nombre de .stack-leaf correspondant aux cartes restantes
+   (plafonné visuellement, cf. commentaire JS) — jamais le contenu réel d'une carte, uniquement
+   un dos générique, pour ne jamais spoiler la prochaine carte avant le tap. */
+.stack-behind {
+  position: absolute; inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.stack-leaf {
+  position: absolute; inset: 0;
+  border-radius: 6px;
+  background: linear-gradient(155deg, #1c1a16 0%, #0c0b0a 55%, #161310 100%);
+  border: 1px solid color-mix(in srgb, var(--alloy-commune-a) 45%, transparent);
+  box-shadow: 0 6px 16px -8px rgba(0,0,0,0.8);
+  /* décalage + réduction d'échelle croissants avec la profondeur (posés en inline style via
+     --depth, cf. JS) : chaque feuille dépasse en dessous (et très légèrement de biais) de celle
+     du dessus, comme une vraie pile de cartes pas parfaitement alignées sur la tranche. */
+  transform:
+    translateY(calc(var(--depth, 0) * 6px))
+    scale(calc(1 - var(--depth, 0) * 0.025));
+  opacity: calc(1 - var(--depth, 0) * 0.1);
+  transition: transform .35s cubic-bezier(.2,.9,.25,1), opacity .35s ease;
+}
+/* léger monogramme en filigrane, centré, pour que la pile ne soit pas un simple rectangle
+   anonyme — cohérent avec l'identité "carte à collectionner" sans rien révéler du contenu. */
+.stack-leaf::after {
+  content: "♰";
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  color: color-mix(in srgb, var(--alloy-commune-a) 55%, transparent);
+  opacity: 0.35;
+}
+
 /* paquet fermé — même habillage chromé que les boosters de l'étagère (silhouette galbée
    mesurée, bandes chromées à cannelures, logo + "5 cartes" + nom d'édition). Le fond passe
    entièrement par `background` sur .pack-closed lui-même (règle partagée avec .booster-body
@@ -1754,6 +1791,9 @@ body::after {
       </div>
     </div>
     <div class="tear-flash" id="tearFlash"></div>
+    <!-- pile des dos de cartes restant à découvrir (épaisseur du paquet, cf. stackBehind en JS)
+         : dos génériques injectés en JS, jamais le contenu réel d'une carte (pas de spoiler). -->
+    <div class="stack-behind" id="stackBehind"></div>
     <!-- reveal-cards injectées en JS -->
   </div>
   <div class="tap-hint" id="tapHint" hidden>Glisser pour faire pivoter · toucher pour continuer</div>
@@ -3165,9 +3205,39 @@ body::after {
   var tapHint = document.getElementById("tapHint");
   var progressEl = document.getElementById("openingProgress");
   var closeBtn = document.getElementById("closeOpening");
+  var stackBehindEl = document.getElementById("stackBehind");
 
   var PACK_SIZE = 5;
   var pullQueue = [];
+  // Plafond visuel du nombre de .stack-leaf réellement créées dans le DOM : au-delà, le dégradé
+  // de scale/opacity (cf. CSS, --depth) rend les feuilles suivantes quasi invisibles, donc pas
+  // la peine d'en instancier plus même pour un paquet plus gros — évite aussi un empilement de
+  // canvas/éléments inutile.
+  var STACK_MAX_LEAVES = 6;
+
+  // (Re)construit la pile de dos de cartes visible derrière la carte en cours de reveal, à partir
+  // du nombre de cartes qu'il reste à découvrir (pullQueue.length - 1 - pullIndex, la carte déjà
+  // affichée au-dessus n'étant pas "dans" la pile). Appelée une fois au lancement du paquet puis
+  // à chaque nextCard() pour que la pile rétrécisse visuellement à chaque tap, comme un vrai
+  // paquet qu'on effeuille.
+  function renderStackBehind(remaining) {
+    if (!stackBehindEl) return;
+    var n = Math.max(0, Math.min(remaining, STACK_MAX_LEAVES));
+    while (stackBehindEl.children.length > n) {
+      stackBehindEl.removeChild(stackBehindEl.lastElementChild);
+    }
+    while (stackBehindEl.children.length < n) {
+      var leaf = document.createElement("div");
+      leaf.className = "stack-leaf";
+      stackBehindEl.appendChild(leaf);
+    }
+    // --depth croissant du dessus (juste sous la carte active) vers le fond de la pile, posé
+    // sur chaque feuille existante pour que l'ordre DOM (plus ancien = plus profond) corresponde
+    // visuellement à l'ordre d'empilement.
+    Array.prototype.forEach.call(stackBehindEl.children, function (leaf, i) {
+      leaf.style.setProperty("--depth", i);
+    });
+  }
   var pullIndex = -1;
   var revealEls = [];
 
@@ -3287,6 +3357,9 @@ body::after {
     });
     revealEls.forEach(function (el) { el.remove(); });
     revealEls = [];
+    // Pile pleine (toutes les cartes du paquet, plafonnée visuellement) tant qu'aucune carte
+    // n'a encore été révélée — nextCard() la réduira d'une feuille à chaque tap.
+    renderStackBehind(pullQueue.length);
 
     // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
     // pas d'écran "pack fermé" ni de geste de déchirure pour ce mode, le clic ouvre directement
@@ -3404,6 +3477,10 @@ body::after {
   function nextCard() {
     pullIndex++;
     updateProgressDots();
+    // La pile sous la carte active représente ce qu'il reste APRÈS celle qui vient de passer au
+    // premier plan (ou plus aucune carte si le paquet est épuisé) — décrémentée avant le early
+    // return de fin de paquet pour qu'elle retombe bien à 0 feuille visible à ce moment-là.
+    renderStackBehind(pullQueue.length - 1 - pullIndex);
     if (pullIndex >= pullQueue.length) {
       tapHint.hidden = true;
       closeBtn.hidden = false;
