@@ -1253,7 +1253,13 @@ body::after {
 /* Rare / Ultra Rare : même gabarit simple que Commune (liseré noir + bande unie + grain
    métallique fin, bords nets), partagé via ce sélecteur combiné — seule la teinte de la bande
    change (rouge foncé uniforme au lieu du gris/argent de Commune, pas de dégradé de couleur
-   entre ces 2 raretés). */
+   entre ces 2 raretés). Doit cibler .mini-card ET .reveal-card (grille ET vue zoom/ouverture) :
+   .rc-frame est injecté par la même buildCardFrameHtml() dans les deux contextes, donc sans ce
+   doublement de sélecteur la grille retombait sur le fond gris/argent de .rc-frame de base
+   (cadre "Commune") pour toutes les cartes Rare/Ultra Rare, alors que la vue zoom affichait bien
+   le bon fond rouge foncé — incohérence visible notamment sur les cartes Ultra Rare (ex. Slayer). */
+.mini-card[data-rarity="rare"] .rc-frame,
+.mini-card[data-rarity="ultra_rare"] .rc-frame,
 .reveal-card[data-rarity="rare"] .rc-frame,
 .reveal-card[data-rarity="ultra_rare"] .rc-frame {
   background:
@@ -1466,23 +1472,38 @@ body::after {
   color: var(--alloy-commune-a);
   border: 1px solid color-mix(in srgb, var(--alloy-commune-a) 55%, transparent);
 }
+/* .mini-card (grille) ET .reveal-card (zoom/ouverture) doivent cibler ces 3 règles de couleur :
+   .rc-rarity-label est injecté par la même buildCardFrameHtml() dans les deux contextes, donc
+   sans ce doublement la grille retombait sur le fond/encre "Commune" par défaut pour Rare/Ultra
+   Rare/Légendaire (seul --metal/--convexity héritait correctement pour Légendaire, via les
+   variables déjà posées sur .mini-card[data-rarity="legendaire"] lui-même — mais pas le
+   background/color/border, propriétés directement stylées et non des var() CSS). */
+.mini-card[data-rarity="rare"] .rc-rarity-label,
 .reveal-card[data-rarity="rare"] .rc-rarity-label {
   background: var(--alloy-rare-a);
   color: var(--ink-on-accent);
   border-color: var(--alloy-rare-a);
 }
+.mini-card[data-rarity="ultra_rare"] .rc-rarity-label,
 .reveal-card[data-rarity="ultra_rare"] .rc-rarity-label {
   background: var(--alloy-ultra-a); color: var(--ink-on-accent); border-color: var(--alloy-ultra-a);
 }
+.mini-card[data-rarity="legendaire"] .rc-rarity-label,
 .reveal-card[data-rarity="legendaire"] .rc-rarity-label {
   background: linear-gradient(90deg, var(--alloy-legend-a), var(--alloy-legend-b));
   color: #1a1208; border-color: var(--alloy-legend-a);
   font-style: italic;
 }
 /* relief metallicss sur la pastille — meme logique de finition par rarete que .mc-rarity-badge,
-   sauf commune (pas de texture pour le palier le plus bas, cf. demande) */
+   sauf commune (pas de texture pour le palier le plus bas, cf. demande). --metal/--convexity sont
+   déjà posées sur .mini-card[data-rarity=...] lui-même (cf. plus bas) et héritent correctement en
+   grille ; ces règles explicites restent nécessaires pour .reveal-card (zoom/ouverture), qui n'a
+   pas cet héritage. */
+.mini-card[data-rarity="rare"] .rc-rarity-label,
 .reveal-card[data-rarity="rare"] .rc-rarity-label { --metal: copper; --convexity: 2; }
+.mini-card[data-rarity="ultra_rare"] .rc-rarity-label,
 .reveal-card[data-rarity="ultra_rare"] .rc-rarity-label { --metal: copper; --convexity: 3; }
+.mini-card[data-rarity="legendaire"] .rc-rarity-label,
 .reveal-card[data-rarity="legendaire"] .rc-rarity-label { --metal: gold; --convexity: 4; }
 
 /* badge "Artiste" — distingue une carte musicien (type==="musician") d'une carte groupe dans le
