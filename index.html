@@ -874,41 +874,33 @@ body::after {
   perspective: 1000px;
 }
 
-/* Pile des cartes restant à découvrir, aperçue en bordure derrière la carte en cours de reveal
-   (même geste que sur les TCG mobiles type Pokémon TCG Pocket : on sent l'épaisseur du paquet
-   diminuer carte après carte). Conteneur inert (hors flux, z-index négatif) rempli en JS par
-   startOpening()/nextCard() avec un nombre de .stack-leaf correspondant aux cartes restantes
-   (plafonné visuellement, cf. commentaire JS) — jamais le contenu réel d'une carte, uniquement
-   un dos générique, pour ne jamais spoiler la prochaine carte avant le tap. */
-.stack-behind {
-  position: absolute; inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-.stack-leaf {
-  position: absolute; inset: 0;
+/* Aperçu de tranche holo de la carte suivante pendant le glissement de la carte active (cf.
+   applyTilt/resetTilt dans buildRevealCard) : invisible au repos (opacity:0), puis une fine
+   bande arc-en-ciel apparaît du côté opposé au glissement, comme la tranche d'une carte qu'on
+   entrevoit en décalant celle du dessus — jamais son contenu, juste le liseré holographique.
+   --edge-w (largeur, px) et --edge-side (0 = dépasse à gauche, 1 = dépasse à droite) posés en
+   JS. Positionnée à l'EXTÉRIEUR du cadre de la carte active (top/bottom alignés sur .stage,
+   mais left/right ancrés à 100%/0% + un léger chevauchement négatif) : la carte active tourne
+   en 3D sur place (rotateY) sans jamais se décaler en X, donc une bande en inset:0 resterait
+   entièrement masquée dessous — ici elle dépasse physiquement du bord, visible par-dessus. */
+.rc-next-edge {
+  position: absolute;
+  top: 2%; bottom: 2%;
+  /* left posé directement en pixels par le JS (cf. applyTilt) plutôt qu'un calc() CSS combinant
+     plusieurs variables : plus simple et plus fiable à faire correspondre pile au bord réel de
+     la carte (dont la largeur dépend du viewport, cf. .stage { width: min(78vw, 300px) }). */
+  left: var(--edge-left, 0px);
+  width: var(--edge-w, 0px);
   border-radius: 6px;
-  background: linear-gradient(155deg, #1c1a16 0%, #0c0b0a 55%, #161310 100%);
-  border: 1px solid color-mix(in srgb, var(--alloy-commune-a) 45%, transparent);
-  box-shadow: 0 6px 16px -8px rgba(0,0,0,0.8);
-  /* décalage + réduction d'échelle croissants avec la profondeur (posés en inline style via
-     --depth, cf. JS) : chaque feuille dépasse en dessous (et très légèrement de biais) de celle
-     du dessus, comme une vraie pile de cartes pas parfaitement alignées sur la tranche. */
-  transform:
-    translateY(calc(var(--depth, 0) * 6px))
-    scale(calc(1 - var(--depth, 0) * 0.025));
-  opacity: calc(1 - var(--depth, 0) * 0.1);
-  transition: transform .35s cubic-bezier(.2,.9,.25,1), opacity .35s ease;
-}
-/* léger monogramme en filigrane, centré, pour que la pile ne soit pas un simple rectangle
-   anonyme — cohérent avec l'identité "carte à collectionner" sans rien révéler du contenu. */
-.stack-leaf::after {
-  content: "♰";
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 28px;
-  color: color-mix(in srgb, var(--alloy-commune-a) 55%, transparent);
-  opacity: 0.35;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(180deg,
+      #ff3b6b 0%, #ffb23b 12%, #fff23b 24%, #4bff7a 36%,
+      #3bd1ff 48%, #6a5bff 60%, #e03bff 72%, #ff3b6b 84%, #ffb23b 100%),
+    linear-gradient(90deg, rgba(0,0,0,0.5), transparent 30%, transparent 70%, rgba(0,0,0,0.5));
+  box-shadow: 0 2px 10px 1px rgba(0,0,0,0.6);
 }
 
 /* paquet fermé — même habillage chromé que les boosters de l'étagère (silhouette galbée
@@ -1791,9 +1783,6 @@ body::after {
       </div>
     </div>
     <div class="tear-flash" id="tearFlash"></div>
-    <!-- pile des dos de cartes restant à découvrir (épaisseur du paquet, cf. stackBehind en JS)
-         : dos génériques injectés en JS, jamais le contenu réel d'une carte (pas de spoiler). -->
-    <div class="stack-behind" id="stackBehind"></div>
     <!-- reveal-cards injectées en JS -->
   </div>
   <div class="tap-hint" id="tapHint" hidden>Glisser pour faire pivoter · toucher pour continuer</div>
@@ -3205,39 +3194,9 @@ body::after {
   var tapHint = document.getElementById("tapHint");
   var progressEl = document.getElementById("openingProgress");
   var closeBtn = document.getElementById("closeOpening");
-  var stackBehindEl = document.getElementById("stackBehind");
 
   var PACK_SIZE = 5;
   var pullQueue = [];
-  // Plafond visuel du nombre de .stack-leaf réellement créées dans le DOM : au-delà, le dégradé
-  // de scale/opacity (cf. CSS, --depth) rend les feuilles suivantes quasi invisibles, donc pas
-  // la peine d'en instancier plus même pour un paquet plus gros — évite aussi un empilement de
-  // canvas/éléments inutile.
-  var STACK_MAX_LEAVES = 6;
-
-  // (Re)construit la pile de dos de cartes visible derrière la carte en cours de reveal, à partir
-  // du nombre de cartes qu'il reste à découvrir (pullQueue.length - 1 - pullIndex, la carte déjà
-  // affichée au-dessus n'étant pas "dans" la pile). Appelée une fois au lancement du paquet puis
-  // à chaque nextCard() pour que la pile rétrécisse visuellement à chaque tap, comme un vrai
-  // paquet qu'on effeuille.
-  function renderStackBehind(remaining) {
-    if (!stackBehindEl) return;
-    var n = Math.max(0, Math.min(remaining, STACK_MAX_LEAVES));
-    while (stackBehindEl.children.length > n) {
-      stackBehindEl.removeChild(stackBehindEl.lastElementChild);
-    }
-    while (stackBehindEl.children.length < n) {
-      var leaf = document.createElement("div");
-      leaf.className = "stack-leaf";
-      stackBehindEl.appendChild(leaf);
-    }
-    // --depth croissant du dessus (juste sous la carte active) vers le fond de la pile, posé
-    // sur chaque feuille existante pour que l'ordre DOM (plus ancien = plus profond) corresponde
-    // visuellement à l'ordre d'empilement.
-    Array.prototype.forEach.call(stackBehindEl.children, function (leaf, i) {
-      leaf.style.setProperty("--depth", i);
-    });
-  }
   var pullIndex = -1;
   var revealEls = [];
 
@@ -3357,9 +3316,10 @@ body::after {
     });
     revealEls.forEach(function (el) { el.remove(); });
     revealEls = [];
-    // Pile pleine (toutes les cartes du paquet, plafonnée visuellement) tant qu'aucune carte
-    // n'a encore été révélée — nextCard() la réduira d'une feuille à chaque tap.
-    renderStackBehind(pullQueue.length);
+    // Nettoie aussi les .rc-next-edge laissées par un paquet précédent (une par carte révélée,
+    // jamais retirées individuellement — cf. buildRevealCard) : sans ça elles s'accumulent
+    // silencieusement dans .stage à chaque nouveau paquet ouvert dans la session.
+    stage.querySelectorAll(".rc-next-edge").forEach(function (edge) { edge.remove(); });
 
     // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
     // pas d'écran "pack fermé" ni de geste de déchirure pour ce mode, le clic ouvre directement
@@ -3477,10 +3437,6 @@ body::after {
   function nextCard() {
     pullIndex++;
     updateProgressDots();
-    // La pile sous la carte active représente ce qu'il reste APRÈS celle qui vient de passer au
-    // premier plan (ou plus aucune carte si le paquet est épuisé) — décrémentée avant le early
-    // return de fin de paquet pour qu'elle retombe bien à 0 feuille visible à ce moment-là.
-    renderStackBehind(pullQueue.length - 1 - pullIndex);
     if (pullIndex >= pullQueue.length) {
       tapHint.hidden = true;
       closeBtn.hidden = false;
@@ -3492,7 +3448,14 @@ body::after {
       return;
     }
     var card = pullQueue[pullIndex];
-    var el = buildRevealCard(card);
+    // hasNext : la carte suivante existe encore dans le paquet — pilote l'aperçu de tranche
+    // holo au drag (cf. buildRevealCard), absent sur la toute dernière carte du paquet.
+    var hasNext = pullIndex + 1 < pullQueue.length;
+    var el = buildRevealCard(card, null, hasNext);
+    // .rc-next-edge (si présent) doit rester SOUS la carte active en z-index : inséré juste
+    // avant elle, donc avant les .reveal-card précédentes déjà empilées dans .stage aussi —
+    // appendChild la place de toute façon au-dessus de tout le reste par ordre DOM normal.
+    if (el._nextEdge) stage.appendChild(el._nextEdge);
     stage.appendChild(el);
     revealEls.push(el);
     if (window.applyMetallicss) {
@@ -3697,7 +3660,7 @@ body::after {
     }
   }
 
-  function buildRevealCard(card, onTap) {
+  function buildRevealCard(card, onTap, hasNext) {
     var el = document.createElement("div");
     el.className = "reveal-card";
     el.dataset.rarity = card.rarity;
@@ -3717,17 +3680,55 @@ body::after {
       '</div>';
     attachCardImageFallbacks(el, card, built);
 
+    // Aperçu de tranche holo de la carte suivante (cf. demande : geste façon Pokémon TCG Pocket
+    // — on ne voit RIEN tant qu'on ne glisse pas, puis en maintenant le glissement d'un côté, la
+    // tranche arc-en-ciel de la prochaine carte du paquet apparaît du côté opposé, comme si on
+    // décalait la carte du dessus pour entrevoir celle d'en dessous). Élément frère de .reveal-
+    // card (pas enfant : il doit rester "fixe" derrière la pile, ne pas suivre le rotateY 3D du
+    // tilt de la carte active), inséré juste avant elle dans .stage pour rester en-dessous en
+    // z-index par ordre DOM. Seulement si une carte suit encore dans le paquet (hasNext) — sur
+    // la vue zoom collection (hasNext undefined) ou la dernière carte du paquet, pas d'élément du
+    // tout : rien à prévisualiser.
+    var nextEdge = null;
+    if (hasNext) {
+      nextEdge = document.createElement("div");
+      nextEdge.className = "rc-next-edge";
+      // el n'est pas encore attaché au DOM à ce stade (buildRevealCard ne fait qu'assembler
+      // l'élément, l'appel site l'attache ensuite) : exposé sur el._nextEdge pour que l'appelant
+      // (nextCard()) l'insère juste avant el au moment de l'appendChild dans .stage.
+      el._nextEdge = nextEdge;
+    }
+
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
     function applyTilt(dx, dy) {
       curRY = Math.max(-18, Math.min(18, dx * 0.12));
       curRX = Math.max(-18, Math.min(18, -dy * 0.12));
       el.style.transform = "rotateX(" + curRX + "deg) rotateY(" + curRY + "deg) scale(1)";
       el.style.setProperty("--holo-angle", (curRY * 6 + curRX * 6) + "deg");
+      if (nextEdge) {
+        // dx>0 (glissement vers la droite) : la carte active pivote comme si son bord gauche
+        // reculait — la tranche de la suivante apparaît donc en dépassant à GAUCHE du cadre (le
+        // côté qu'on vient de découvrir), collée contre lui ; et inversement pour dx<0. Largeur/
+        // opacité croissent avec l'amplitude du geste, plafonnées pour ne jamais déborder de
+        // façon grotesque même sur un très grand mouvement. Position posée en pixels réels
+        // (largeur courante de la carte, cf. .stage { width: min(78vw, 300px) }) plutôt qu'en
+        // pourcentage, pour dépasser fidèlement du bord quelle que soit la taille d'écran.
+        var amount = Math.max(-1, Math.min(1, dx / 90));
+        var edgeW = Math.abs(amount) * 22;
+        var cardW = el.offsetWidth;
+        nextEdge.style.opacity = Math.min(1, Math.abs(amount) * 1.4);
+        nextEdge.style.setProperty("--edge-w", edgeW + "px");
+        // amount>0 (drag droite) → tranche à gauche, juste avant le bord gauche de la carte.
+        // amount<0 (drag gauche) → tranche à droite, juste après le bord droit de la carte.
+        nextEdge.style.setProperty("--edge-left",
+          (amount > 0 ? -edgeW + 3 : cardW - 3) + "px");
+      }
     }
     function resetTilt() {
       curRX = 0; curRY = 0;
       el.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
       el.style.setProperty("--holo-angle", "0deg");
+      if (nextEdge) { nextEdge.style.opacity = 0; nextEdge.style.setProperty("--edge-w", "0px"); }
     }
     el.addEventListener("pointerdown", function (e) {
       isDragging = true; startX = e.clientX; startY = e.clientY;
