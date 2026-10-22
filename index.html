@@ -3749,8 +3749,14 @@ export const metallicss = (elem) => {
     if (ry < 0) ry = 0;
     tempImage = new Image();
     tempImage.onload = function () {
-      canvas.height = isFirefox ? 512 : y * 2 > 1024 ? 1024 : y * 2;
-      canvas.width = isFirefox ? 512 : x * 2 > 1024 ? 1024 : x * 2;
+      // Plafond de rendu abaissé de 1024 à 512 (tout navigateur, pas seulement Firefox) : le
+      // filtre feGaussianBlur/feDisplacementMap qui produit cette texture est très coûteux en
+      // mémoire GPU côté WebKit, et s'accumule vite en scrollant la grille de collection (même
+      // avec la virtualisation IntersectionObserver déjà en place) — observé comme crash
+      // récurrent de l'onglet sur Safari/iPhone. L'effet métallique reste visible à cette
+      // résolution, qui suffit largement pour un cadre de carte affiché à l'échelle du téléphone.
+      canvas.height = y * 2 > 512 ? 512 : y * 2;
+      canvas.width = x * 2 > 512 ? 512 : x * 2;
       setTimeout(() => {
         context.drawImage(this, 0, 0);
         domUrl.revokeObjectURL(url);
@@ -3882,8 +3888,12 @@ export const metallicss = (elem) => {
                 }),
               ],
               props: {
-                height: isFirefox ? 512 : y * 2 > 1024 ? 1024 : y * 2,
-                width: isFirefox ? 512 : x * 2 > 1024 ? 1024 : x * 2,
+                // Même plafond 512 que le canvas plus haut : réduit la résolution à laquelle le
+                // moteur de rendu calcule réellement les filtres (feGaussianBlur/feDisplacementMap),
+                // pas seulement la taille du canvas de destination — c'est là qu'est le vrai coût
+                // mémoire/GPU sur Safari, pas dans la copie finale.
+                height: y * 2 > 512 ? 512 : y * 2,
+                width: x * 2 > 512 ? 512 : x * 2,
                 preserveAspectRatio: "none",
                 style: `transform: scale(1, ${inverse ? "-" : ""}1)`,
                 viewBox: "768 768 512 512",
