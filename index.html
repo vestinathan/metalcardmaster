@@ -874,35 +874,65 @@ body::after {
   perspective: 1000px;
 }
 
-/* Aperçu de tranche holo de la carte suivante pendant le glissement de la carte active (cf.
-   applyTilt/resetTilt dans buildRevealCard) : invisible au repos (opacity:0), puis une fine
-   bande arc-en-ciel apparaît du côté opposé au glissement, comme la tranche d'une carte qu'on
-   entrevoit en décalant celle du dessus — jamais son contenu, juste le liseré holographique.
-   --edge-w (largeur, px) et --edge-side (0 = dépasse à gauche, 1 = dépasse à droite) posés en
-   JS. Positionnée à l'EXTÉRIEUR du cadre de la carte active (top/bottom alignés sur .stage,
-   mais left/right ancrés à 100%/0% + un léger chevauchement négatif) : la carte active tourne
-   en 3D sur place (rotateY) sans jamais se décaler en X, donc une bande en inset:0 resterait
-   entièrement masquée dessous — ici elle dépasse physiquement du bord, visible par-dessus. */
-.rc-next-edge {
+/* Pile des tranches des cartes restantes du paquet, visible pendant le glissement de la carte
+   active (cf. applyTilt dans buildRevealCard) : invisible au repos, puis chaque tranche dépasse
+   du côté opposé au glissement au fur et à mesure qu'on tire — comme un jeu de cartes en éventail
+   dont on verrait le chant de chacune. Référence : capture Pokémon TCG Pocket fournie par
+   l'utilisateur — on y distingue PLUSIEURS tranches empilées et décalées (carte active, puis 2-3
+   cartes derrière), chacune avec son propre fini : des tranches grises/blanches mates pour des
+   cartes communes, une tranche holographique à larges bandes de couleur diagonales (pas de petits
+   éclats, de vraies bandes continues façon film prismatique) pour une carte rare/légendaire tout
+   au fond de la pile. Jamais le contenu réel de ces cartes, seulement leur chant.
+   Un .rc-next-card par carte restante (jusqu'à NEXT_STACK_MAX, cf. JS), empilé en DOM dans
+   l'ordre du paquet (la toute prochaine carte en premier/dessus). Éléments frères de .reveal-card (pas
+   enfants : doivent rester fixes, ne pas suivre le rotateY du tilt), positionnés en pixels réels
+   par le JS (left/width, cf. applyTilt) pour dépasser fidèlement du bord quelle que soit la
+   largeur d'écran — une bande en inset:0 resterait entièrement masquée dessous, la carte active
+   ne se décalant jamais en X (rotateY seul). Chaque tranche suivante est légèrement plus étroite
+   et plus loin dans la pile (--stack-depth, posé en JS), pour l'effet d'éventail. */
+.rc-next-card {
   position: absolute;
-  top: 2%; bottom: 2%;
-  /* left posé directement en pixels par le JS (cf. applyTilt) plutôt qu'un calc() CSS combinant
-     plusieurs variables : plus simple et plus fiable à faire correspondre pile au bord réel de
-     la carte (dont la largeur dépend du viewport, cf. .stage { width: min(78vw, 300px) }). */
+  top: calc(1% + var(--stack-depth, 0) * 1.4%);
+  bottom: calc(1% + var(--stack-depth, 0) * 1.4%);
   left: var(--edge-left, 0px);
   width: var(--edge-w, 0px);
-  border-radius: 6px;
+  border-radius: 4px;
   opacity: 0;
   pointer-events: none;
-  z-index: 1;
-  /* dégradé continu (pas répété : un seul passage de teintes sur toute la hauteur, comme le
-     reflet holographique réel de la tranche d'une carte) en pastel doux, pas saturé — une bande
-     de quelques pixels à peine, qui doit rester un simple liseré, jamais un bloc de couleur. */
-  background: linear-gradient(170deg,
-    #f7c8d8 0%, #f7dcb8 18%, #eef0c0 36%, #c3e8cf 52%,
-    #bfe3ef 68%, #cdd0f2 84%, #f0c7e8 100%);
-  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.5);
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.6);
+  /* Fenêtre de recadrage : ne montre que ce que .rc-next-card-spine (le vrai clone de carte,
+     cf. JS) laisse dépasser par sa translation — jamais son contenu entier. */
+  overflow: hidden;
 }
+/* Le chant d'une carte, dans la vraie vie, c'est le bord RÉEL de CETTE carte précise, pas une
+   approximation dessinée à la main (dégradés CSS) : ça ne rend jamais fidèlement le cadre exact
+   défini par buildCardFrameHtml()/.rc-frame, qui peut changer (couleurs, logo, relief...) sans
+   que cette tranche suive. À la place, .rc-next-card-spine est un clone du VRAI .rc-frame de la
+   carte à venir (même HTML que buildCardFrameHtml(), même taille que la carte active), posé en
+   JS (cf. buildRevealCard) et translaté en X pour que seul son bord dépasse dans la fenêtre
+   étroite de .rc-next-card — un recadrage, pas un dessin. Le reste de son contenu (photo, texte)
+   est donc automatiquement masqué par overflow:hidden sur le parent, jamais affiché. */
+/* .rc-next-card-spine porte aussi la classe .reveal-card (cf. JS) pour hériter tel quel tout
+   l'habillage par rareté ciblant ".reveal-card[data-rarity=...] .rc-frame/.rc-rarity-label" —
+   sans ça le clone retombait toujours sur le cadre "Commune" par défaut. Mais .reveal-card
+   "de base" le met en opacity:0 + scale(0.4) + transition (état de repos avant le flip
+   d'apparition) : .rc-next-card-spine doit annuler ça pour rester un recadrage statique toujours
+   pleinement visible, piloté uniquement par sa propre position (cf. --spine-offset en JS), jamais
+   par l'animation de flip de la vraie carte active. ".rc-next-card .rc-next-card-spine" (deux
+   classes de contexte) l'emporte en spécificité sur ".reveal-card" seul. */
+.rc-next-card .rc-next-card-spine {
+  position: absolute;
+  inset: auto;
+  top: 0; bottom: 0;
+  width: var(--spine-card-w, 300px);
+  left: var(--spine-offset, 0px);
+  opacity: 1;
+  transform: none;
+  transition: none;
+  pointer-events: none;
+  cursor: default;
+}
+.rc-next-card-spine .rc-frame { position: absolute; inset: 0; }
 
 /* paquet fermé — même habillage chromé que les boosters de l'étagère (silhouette galbée
    mesurée, bandes chromées à cannelures, logo + "5 cartes" + nom d'édition). Le fond passe
@@ -3317,10 +3347,10 @@ body::after {
     });
     revealEls.forEach(function (el) { el.remove(); });
     revealEls = [];
-    // Nettoie aussi les .rc-next-edge laissées par un paquet précédent (une par carte révélée,
+    // Nettoie aussi les .rc-next-card laissées par un paquet précédent (une par carte révélée,
     // jamais retirées individuellement — cf. buildRevealCard) : sans ça elles s'accumulent
     // silencieusement dans .stage à chaque nouveau paquet ouvert dans la session.
-    stage.querySelectorAll(".rc-next-edge").forEach(function (edge) { edge.remove(); });
+    stage.querySelectorAll(".rc-next-card").forEach(function (nc) { nc.remove(); });
 
     // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
     // pas d'écran "pack fermé" ni de geste de déchirure pour ce mode, le clic ouvre directement
@@ -3449,14 +3479,23 @@ body::after {
       return;
     }
     var card = pullQueue[pullIndex];
-    // hasNext : la carte suivante existe encore dans le paquet — pilote l'aperçu de tranche
-    // holo au drag (cf. buildRevealCard), absent sur la toute dernière carte du paquet.
-    var hasNext = pullIndex + 1 < pullQueue.length;
-    var el = buildRevealCard(card, null, hasNext);
-    // .rc-next-edge (si présent) doit rester SOUS la carte active en z-index : inséré juste
-    // avant elle, donc avant les .reveal-card précédentes déjà empilées dans .stage aussi —
-    // appendChild la place de toute façon au-dessus de tout le reste par ordre DOM normal.
-    if (el._nextEdge) stage.appendChild(el._nextEdge);
+    // upcomingCards : les cartes qui restent dans le paquet après celle-ci, dans l'ordre — pilote
+    // la pile de tranches au drag (cf. buildRevealCard), vide sur la toute dernière carte du
+    // paquet.
+    var upcomingCards = pullQueue.slice(pullIndex + 1);
+    var el = buildRevealCard(card, null, upcomingCards);
+    // .rc-next-cards (si présents) doivent rester SOUS la carte active en z-index : insérés
+    // juste avant elle, donc avant les .reveal-card précédentes déjà empilées dans .stage aussi —
+    // appendChild la place de toute façon au-dessus de tout le reste par ordre DOM normal. On les
+    // insère dans l'ordre "dessous d'abord" (la plus profonde en premier, _nextCards[last] = la
+    // toute prochaine carte en dernier) : chaque appendChild suivant finit visuellement au-dessus
+    // du précédent, donc la carte juste derrière (--stack-depth 0) termine tout en haut, bien
+    // visible, et les tranches plus profondes restent dessous sans être masquées.
+    if (el._nextCards) {
+      for (var nci = el._nextCards.length - 1; nci >= 0; nci--) {
+        stage.appendChild(el._nextCards[nci]);
+      }
+    }
     stage.appendChild(el);
     revealEls.push(el);
     if (window.applyMetallicss) {
@@ -3661,7 +3700,12 @@ body::after {
     }
   }
 
-  function buildRevealCard(card, onTap, hasNext) {
+  // Nombre maximum de tranches de cartes restantes affichées dans la pile (au-delà, le paquet
+  // réel peut contenir plus de cartes que ce qui est montré — cf. référence Pokémon TCG Pocket
+  // où seules 2-3 tranches sont visibles même si plus de cartes restent).
+  var NEXT_STACK_MAX = 3;
+
+  function buildRevealCard(card, onTap, upcomingCards) {
     var el = document.createElement("div");
     el.className = "reveal-card";
     el.dataset.rarity = card.rarity;
@@ -3681,23 +3725,63 @@ body::after {
       '</div>';
     attachCardImageFallbacks(el, card, built);
 
-    // Aperçu de tranche holo de la carte suivante (cf. demande : geste façon Pokémon TCG Pocket
-    // — on ne voit RIEN tant qu'on ne glisse pas, puis en maintenant le glissement d'un côté, la
-    // tranche arc-en-ciel de la prochaine carte du paquet apparaît du côté opposé, comme si on
-    // décalait la carte du dessus pour entrevoir celle d'en dessous). Élément frère de .reveal-
-    // card (pas enfant : il doit rester "fixe" derrière la pile, ne pas suivre le rotateY 3D du
-    // tilt de la carte active), inséré juste avant elle dans .stage pour rester en-dessous en
-    // z-index par ordre DOM. Seulement si une carte suit encore dans le paquet (hasNext) — sur
-    // la vue zoom collection (hasNext undefined) ou la dernière carte du paquet, pas d'élément du
-    // tout : rien à prévisualiser.
-    var nextEdge = null;
-    if (hasNext) {
-      nextEdge = document.createElement("div");
-      nextEdge.className = "rc-next-edge";
-      // el n'est pas encore attaché au DOM à ce stade (buildRevealCard ne fait qu'assembler
-      // l'élément, l'appel site l'attache ensuite) : exposé sur el._nextEdge pour que l'appelant
-      // (nextCard()) l'insère juste avant el au moment de l'appendChild dans .stage.
-      el._nextEdge = nextEdge;
+    // Pile des tranches des cartes restantes (geste façon Pokémon TCG Pocket — rien de visible
+    // au repos, puis chaque tranche dépasse du côté opposé au glissement, proportionnellement à
+    // son amplitude, cf. .rc-next-card en CSS). Éléments frères de .reveal-card (pas enfants :
+    // doivent rester fixes, ne pas suivre le rotateY du tilt), insérés juste avant elle dans
+    // .stage. upcomingCards = cartes du paquet après celle-ci, dans l'ordre (la toute prochaine
+    // en premier) ; absent/vide sur la vue zoom collection ou la dernière carte du paquet, rien
+    // à prévisualiser. On plafonne à NEXT_STACK_MAX tranches visibles, la première (dessus de
+    // la pile, --stack-depth 0) étant la vraie carte suivante, chacune montrant le bord RÉEL de
+    // cette carte précise (clone de buildCardFrameHtml, recadré — cf. .rc-next-card-spine en CSS
+    // et le positionnement dans applyTilt plus bas).
+    var nextCardEls = [];
+    if (upcomingCards && upcomingCards.length) {
+      var stackCards = upcomingCards.slice(0, NEXT_STACK_MAX);
+      // Construites en DOM dans l'ordre inverse (la plus profonde d'abord) pour que la carte
+      // suivante immédiate se retrouve la plus proche de la carte active en z-index naturel ;
+      // el._nextCards garde l'ordre "dessus d'abord" pour l'appelant (nextCard()).
+      for (var si = stackCards.length - 1; si >= 0; si--) {
+        var stackCard = stackCards[si];
+        var slice = document.createElement("div");
+        slice.className = "rc-next-card";
+        slice.dataset.rarity = stackCard.rarity;
+        slice.style.setProperty("--stack-depth", String(si));
+        // .rc-next-card-spine est un VRAI clone de carte (même markup que la carte active, cf.
+        // buildCardFrameHtml) plutôt qu'un dessin approximatif : la fenêtre étroite de
+        // .rc-next-card (overflow:hidden) n'en laisse voir qu'un recadrage de son bord, cf.
+        // positionnement en JS dans applyTilt/resetTilt. On lui donne aussi la classe
+        // "reveal-card" (+ data-rarity) : tout l'habillage par rareté (couleur de .rc-frame,
+        // --metal/--convexity de .rc-rarity-label, etc.) est défini via des sélecteurs
+        // ".reveal-card[data-rarity=...] .rc-frame" — sans cette classe le clone retombait
+        // TOUJOURS sur le cadre "Commune" par défaut (gris) quelle que soit la vraie rareté, et
+        // le canvas .metal de metallicss (position:absolute, fill blanc par défaut faute de
+        // --metal) débordait en plein sur la fenêtre de recadrage. .rc-next-card-spine garde sa
+        // propre règle CSS (position/taille/translation) qui prime sur .reveal-card de base
+        // (opacity/transform de repos) via une spécificité plus élevée, cf. CSS.
+        var spineEl = document.createElement("div");
+        spineEl.className = "rc-next-card-spine reveal-card";
+        spineEl.dataset.rarity = stackCard.rarity;
+        spineEl.innerHTML = buildCardFrameHtml(stackCard).html;
+        slice.appendChild(spineEl);
+        slice._stackCard = stackCard;
+        // Légendaire : le cadre réel tire ses teintes de --holo-a/--holo-b (cf.
+        // .reveal-card[data-rarity="legendaire"] .rc-frame) — posées sur ce clone comme sur la
+        // vraie carte, pour que le bord montré reprenne les couleurs extraites de SON logo.
+        if (stackCard.rarity === "legendaire") {
+          applyLogoHolo(spineEl, stackCard);
+        }
+        // Pas d'appel à applyMetallicss ici volontairement : le relief métallique (canvas calculé
+        // en position:absolute sur l'élément .metallicss, cf. metallicss() plus bas) est fait pour
+        // une carte affichée en entier, pas pour un recadrage de quelques pixels de large — à
+        // cette échelle le canvas (dont le fill retombe sur "white" si --metal n'est pas résolu
+        // avant son premier rendu asynchrone) a déjà produit un à-plat clair qui masquait tout le
+        // cadre en dessous. Les couleurs de .rc-frame/.rc-rarity-label (héritées via les
+        // sélecteurs [data-rarity], cf. classe "reveal-card" ajoutée plus haut) suffisent pour ce
+        // recadrage.
+        nextCardEls[si] = slice;
+      }
+      el._nextCards = nextCardEls;
     }
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
@@ -3706,33 +3790,68 @@ body::after {
       curRX = Math.max(-18, Math.min(18, -dy * 0.12));
       el.style.transform = "rotateX(" + curRX + "deg) rotateY(" + curRY + "deg) scale(1)";
       el.style.setProperty("--holo-angle", (curRY * 6 + curRX * 6) + "deg");
-      if (nextEdge) {
-        // dx>0 (glissement vers la droite) : la carte active pivote comme si son bord gauche
-        // reculait — la tranche de la suivante apparaît donc en dépassant à GAUCHE du cadre (le
-        // côté qu'on vient de découvrir), collée contre lui ; et inversement pour dx<0. Largeur/
-        // opacité croissent avec l'amplitude du geste, plafonnées pour ne jamais déborder de
-        // façon grotesque même sur un très grand mouvement. Position posée en pixels réels
-        // (largeur courante de la carte, cf. .stage { width: min(78vw, 300px) }) plutôt qu'en
-        // pourcentage, pour dépasser fidèlement du bord quelle que soit la taille d'écran.
+      if (nextCardEls.length) {
+        // dx>0 (glissement vers la droite) : les tranches des suivantes apparaissent en
+        // dépassant à GAUCHE du cadre (le côté qu'on vient de découvrir) ; et inversement pour
+        // dx<0. Référence (capture Pokémon TCG Pocket) : on voit plusieurs tranches DISTINCTES
+        // les unes À CÔTÉ des autres (comme un jeu de cartes en éventail vu par la tranche), pas
+        // une seule épaisseur empilée au même endroit — donc chaque carte de la pile est placée à
+        // un décalage horizontal CROISSANT (SLICE_STEP par profondeur), chacune gardant sa propre
+        // largeur fixe (SLICE_W) une fois complètement sortie, au lieu de toutes se superposer au
+        // même bord. L'amplitude du glissement ne pilote que la progression de sortie (0 → 1),
+        // pas la largeur finale de chaque tranche. Position posée en pixels réels (largeur
+        // courante de la carte, cf. .stage { width: min(78vw, 300px) }) pour dépasser fidèlement
+        // du bord quelle que soit la taille d'écran.
         var amount = Math.max(-1, Math.min(1, dx / 90));
-        // Plafond volontairement très bas (6px) : sur une carte ~300px de large, ça reste un
-        // simple liseré qui dépasse, jamais un bloc de couleur — cf. retour utilisateur sur une
-        // première version à 22px, bien trop épaisse et visuellement criarde.
-        var edgeW = Math.abs(amount) * 6;
+        var progress = Math.min(1, Math.abs(amount) * 1.4);
         var cardW = el.offsetWidth;
-        nextEdge.style.opacity = Math.min(1, Math.abs(amount) * 1.4);
-        nextEdge.style.setProperty("--edge-w", edgeW + "px");
-        // amount>0 (drag droite) → tranche à gauche, juste avant le bord gauche de la carte.
-        // amount<0 (drag gauche) → tranche à droite, juste après le bord droit de la carte.
-        nextEdge.style.setProperty("--edge-left",
-          (amount > 0 ? -edgeW + 3 : cardW - 3) + "px");
+        var SLICE_W = 10;
+        var SLICE_STEP = 6;
+        nextCardEls.forEach(function (slice, depth) {
+          // chaque tranche plus profonde sort légèrement après la précédente (stagger), pour que
+          // l'éventail se déploie progressivement plutôt que d'apparaître toutes à la fois.
+          var staggered = Math.max(0, Math.min(1, progress * 1.5 - depth * 0.18));
+          var edgeW = SLICE_W * staggered;
+          var offset = depth * SLICE_STEP * staggered;
+          var windowLeft = amount > 0 ? -offset - edgeW + 3 : cardW + offset - 3;
+          slice.style.opacity = staggered > 0.05 ? 1 : 0;
+          slice.style.setProperty("--edge-w", edgeW + "px");
+          slice.style.setProperty("--edge-left", windowLeft + "px");
+          // .rc-next-card-spine est le clone PLEINE TAILLE de la carte (cf. construction plus
+          // haut), positionné en absolu À L'INTÉRIEUR de la fenêtre .rc-next-card (son propre
+          // conteneur de positionnement, donc en coordonnées LOCALES à cette fenêtre, 0 = bord
+          // gauche de la fenêtre — indépendant de windowLeft). On veut que le MÊME bord que celui
+          // qu'on découvre sur la carte active (droit si amount>0 — la fenêtre dépasse à gauche de
+          // la carte active, donc montre le bord DROIT de la suivante ; gauche sinon) tombe pile
+          // dans cette fenêtre.
+          // Le tout premier pixel du cadre réel (x=0 cote SVG viewBox 300x420, cf.
+          // buildCardFrameHtml/clipOuterRing) est un simple liseré noir de ~9/300e de la largeur,
+          // AVANT la bande colorée de rareté (rect x=9..291, cf. regles CSS .rc-frame par
+          // rarete) — centrer la fenetre de recadrage pile sur x=0 ne montre donc que ce liseré
+          // noir sur fond de scene noir (invisible) au lieu de la vraie couleur de la carte,
+          // constat fait en comparant les tranches "rare" (invisibles) a la legendaire (visible,
+          // seule a utiliser un degrade plein des x=0 au lieu d'un rect+liseré). Fenetre calée sur
+          // le MILIEU de la bande colorée (~15.5/300e de cardW, cf. rect x=9 w=282 => centre a
+          // x=150, mais vu de tres pres/recadré on vise le milieu du LISERE+bande proche du bord,
+          // pas le centre de la carte) plutôt que sur le bord physique strict.
+          var EDGE_BAND_CENTER_RATIO = 15.5 / 300;
+          var bandCenterX = amount > 0
+            ? cardW * (1 - EDGE_BAND_CENTER_RATIO)
+            : cardW * EDGE_BAND_CENTER_RATIO;
+          slice.style.setProperty("--spine-card-w", cardW + "px");
+          var spineOffset = edgeW / 2 - bandCenterX;
+          slice.firstChild.style.setProperty("--spine-offset", spineOffset + "px");
+        });
       }
     }
     function resetTilt() {
       curRX = 0; curRY = 0;
       el.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
       el.style.setProperty("--holo-angle", "0deg");
-      if (nextEdge) { nextEdge.style.opacity = 0; nextEdge.style.setProperty("--edge-w", "0px"); }
+      nextCardEls.forEach(function (slice) {
+        slice.style.opacity = 0;
+        slice.style.setProperty("--edge-w", "0px");
+      });
     }
     el.addEventListener("pointerdown", function (e) {
       isDragging = true; startX = e.clientX; startY = e.clientY;
