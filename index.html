@@ -3743,6 +3743,16 @@ const serializer = new XMLSerializer(),
       result: "map",
     },
   });
+
+// Cache global des rendus metallicss déjà calculés, partagé par tous les éléments .metallicss
+// de la page (cadres de carte, badges de rareté...). Clé = combinaison exacte des paramètres
+// visuels qui déterminent le résultat du filtre SVG (cf. commentaire dans metallicss() plus
+// bas) ; valeur = l'Image HTMLImageElement déjà décodée, prête à être redessinée sans repasser
+// par feGaussianBlur/feDisplacementMap (le vrai coût GPU sur Safari). Pas de limite de taille :
+// le nombre de combinaisons distinctes réellement atteignables reste très faible (une poignée
+// de raretés × deux types d'éléments cadre/badge), donc pas de risque de croissance non bornée.
+const metallicssCache = new Map();
+
 export const metallicss = (elem) => {
     const { offsetHeight: y, offsetWidth: x } = elem,
       { backgroundColor: background, borderRadius } = getComputedStyle(elem),
@@ -3816,6 +3826,38 @@ export const metallicss = (elem) => {
     if (x === 0 || y === 0) return;
     if (rx < 0) rx = 0;
     if (ry < 0) ry = 0;
+
+    // Cache de rendu : à paramètres visuels identiques (taille, coin, finish, profondeur, fond),
+    // le pipeline SVG (feGaussianBlur + feDisplacementMap) produit TOUJOURS la même texture —
+    // or toutes les cartes légendaires de la grille partagent exactement ces paramètres (même
+    // gabarit CSS, même --metal:gold/--convexity:4). Plutôt que de relancer ce calcul coûteux
+    // (coût GPU élevé sur Safari — cf. commentaire plus bas) à chaque fois qu'une carte légendaire
+    // réapparaît dans le viewport pendant un scroll (virtualisation IntersectionObserver), on
+    // réutilise l'image déjà décodée la première fois qu'une telle combinaison a été rendue.
+    const cacheW = x * 2 > 512 ? 512 : x * 2,
+      cacheH = y * 2 > 512 ? 512 : y * 2,
+      cacheKey = [cacheW, cacheH, radius, rawDepth, finish, background].join("|"),
+      cached = metallicssCache.get(cacheKey);
+    if (elem.querySelector(":scope > .metal") === null) {
+      canvas.className = "metal";
+      elem.append(canvas);
+    }
+    if (cached) {
+      canvas.height = cacheH;
+      canvas.width = cacheW;
+      context.drawImage(cached, 0, 0);
+      Object.assign(elem.querySelector(":scope > .metal").style, {
+        height: "100%",
+        left: "0",
+        maxWidth: "100%",
+        position: "absolute",
+        top: "0",
+        width: "100%",
+        zIndex: -1,
+      });
+      return;
+    }
+
     tempImage = new Image();
     tempImage.onload = function () {
       // Plafond de rendu abaissé de 1024 à 512 (tout navigateur, pas seulement Firefox) : le
@@ -3824,18 +3866,16 @@ export const metallicss = (elem) => {
       // avec la virtualisation IntersectionObserver déjà en place) — observé comme crash
       // récurrent de l'onglet sur Safari/iPhone. L'effet métallique reste visible à cette
       // résolution, qui suffit largement pour un cadre de carte affiché à l'échelle du téléphone.
-      canvas.height = y * 2 > 512 ? 512 : y * 2;
-      canvas.width = x * 2 > 512 ? 512 : x * 2;
+      canvas.height = cacheH;
+      canvas.width = cacheW;
       setTimeout(() => {
         context.drawImage(this, 0, 0);
         domUrl.revokeObjectURL(url);
-        tempImage.remove();
+        // Conserve l'image décodée (pas le blob/object URL, révoqué juste au-dessus) pour les
+        // prochains éléments partageant la même combinaison taille/coin/finish/profondeur/fond.
+        metallicssCache.set(cacheKey, tempImage);
       }, 0);
     };
-    if (elem.querySelector(":scope > .metal") === null) {
-      canvas.className = "metal";
-      elem.append(canvas);
-    }
     url = domUrl.createObjectURL(
       new Blob(
         [
