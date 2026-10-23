@@ -3401,19 +3401,10 @@ body::after {
     }, 420);
   }
 
-  function nextCard() {
-    pullIndex++;
-    updateProgressDots();
-    if (pullIndex >= pullQueue.length) {
-      tapHint.hidden = true;
-      closeBtn.hidden = false;
-      // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
-      // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
-      pullQueue.forEach(function (c) { addOwned(c.id); });
-      saveOwned();
-      renderGrid();
-      return;
-    }
+  // Construit, insère et joue l'animation d'entrée (flip, ou voile de fumée pour les légendaires)
+  // de la carte à pullQueue[pullIndex] — partagé entre nextCard() et le retour en arrière au
+  // swipe droite, pour que les deux directions jouent exactement la même animation de reveal.
+  function revealCurrentCard() {
     var card = pullQueue[pullIndex];
     var el = buildRevealCard(card);
     stage.appendChild(el);
@@ -3437,6 +3428,7 @@ body::after {
       if (card.rarity === "legendaire" && window.matchMedia("(prefers-reduced-motion: reduce)").matches === false) {
         stage.classList.add("legendary-shake");
       }
+      if (card.rarity === "legendaire") applyLogoHolo(el, card);
       // .flipping ne sert qu'à jouer l'animation d'entrée une fois ; on la retire à la fin pour
       // que le transform inline posé par le tilt au doigt (applyTilt/resetTilt plus haut) ne
       // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
@@ -3448,8 +3440,36 @@ body::after {
           el.removeEventListener("animationend", onFlipEnd);
         }
       });
+      requestAnimationFrame(function () { fitCardMoves(el); });
     });
     tapHint.hidden = false;
+  }
+
+  function nextCard() {
+    pullIndex++;
+    updateProgressDots();
+    if (pullIndex >= pullQueue.length) {
+      tapHint.hidden = true;
+      closeBtn.hidden = false;
+      // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
+      // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
+      pullQueue.forEach(function (c) { addOwned(c.id); });
+      saveOwned();
+      renderGrid();
+      return;
+    }
+    revealCurrentCard();
+  }
+
+  // Retour arrière (swipe droite) : rejoue la même animation d'entrée que nextCard() sur la
+  // carte précédente du paquet, pour que les deux directions de swipe soient visuellement
+  // cohérentes (flip / voile de fumée), au lieu d'un simple fondu statique.
+  function prevCard() {
+    if (pullIndex <= 0) return;
+    pullIndex--;
+    updateProgressDots();
+    closeBtn.hidden = true;
+    revealCurrentCard();
   }
 
   // extrait 2 teintes vibrantes dominantes du logo du groupe (quand il existe) pour teinter le
@@ -3675,20 +3695,7 @@ body::after {
         if (deltaX < -80 && pullIndex < pullQueue.length - 1) {
           nextCard();
         } else if (deltaX > 80 && pullIndex > 0) {
-          pullIndex--;
-          updateProgressDots();
-          var prevCard = pullQueue[pullIndex];
-          var prevEl = buildRevealCard(prevCard);
-          stage.appendChild(prevEl);
-          revealEls.push(prevEl);
-          if (window.applyMetallicss) {
-            prevEl.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
-          }
-          requestAnimationFrame(function () {
-            prevEl.classList.add("showing");
-            requestAnimationFrame(function () { fitCardMoves(prevEl); });
-            if (prevCard.rarity === "legendaire") applyLogoHolo(prevEl, prevCard);
-          });
+          prevCard();
         }
       }
     });
