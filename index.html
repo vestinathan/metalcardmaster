@@ -3662,9 +3662,35 @@ body::after {
     });
     el.addEventListener("pointerup", function (e) {
       var moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+      var deltaX = e.clientX - startX;
+      var deltaY = Math.abs(e.clientY - startY);
       isDragging = false;
       resetTilt();
-      if (moved < 8) (onTap || nextCard)();
+      // swipe gauche (deltaX < -80px) : carte suivante
+      // swipe droite (deltaX > 80px) : carte précédente
+      // swipe vertical ignoré si deltaY dépasse la moitié du deltaX horizontal
+      if (moved < 8) {
+        (onTap || nextCard)();
+      } else if (Math.abs(deltaX) > 80 && deltaY < Math.abs(deltaX) / 2) {
+        if (deltaX < -80 && pullIndex < pullQueue.length - 1) {
+          nextCard();
+        } else if (deltaX > 80 && pullIndex > 0) {
+          pullIndex--;
+          updateProgressDots();
+          var prevCard = pullQueue[pullIndex];
+          var prevEl = buildRevealCard(prevCard);
+          stage.appendChild(prevEl);
+          revealEls.push(prevEl);
+          if (window.applyMetallicss) {
+            prevEl.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+          }
+          requestAnimationFrame(function () {
+            prevEl.classList.add("showing");
+            requestAnimationFrame(function () { fitCardMoves(prevEl); });
+            if (prevCard.rarity === "legendaire") applyLogoHolo(prevEl, prevCard);
+          });
+        }
+      }
     });
     el.addEventListener("pointercancel", function () { isDragging = false; resetTilt(); });
 
