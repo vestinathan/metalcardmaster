@@ -230,6 +230,14 @@ body::after {
   background: #0c0b0a;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 2px rgba(0,0,0,0.6);
 }
+/* Fondu à l'apparition d'une carte peuplée par l'IntersectionObserver (cf. populateMiniCard) :
+   sans ça, le contenu (image comprise) passe de rien à tout en un seul innerHTML, ce qui se
+   perçoit comme un clignotement pendant le scroll. .mc-populating part d'opacity 0 et est
+   retirée juste après l'injection (cf. JS), déclenchant la transition vers 1. Pas de transition
+   sur la disparition (depopulateMiniCard vide instantanément, hors viewport donc invisible) :
+   seule l'apparition a besoin d'être adoucie. */
+.mini-card.mc-populating { opacity: 0; }
+.mini-card { transition: opacity 180ms ease-out; }
 .mini-card::before {
   content: ""; position: absolute; inset: -8px; z-index: -1; border-radius: 18px;
   opacity: 0.45;
@@ -2996,7 +3004,11 @@ body::after {
     // l'effet comme marqueur de rareté exceptionnelle plutôt qu'une texture appliquée partout, et
     // réduit d'autant le nombre de rendus SVG coûteux simultanés dans la grille (sensible côté
     // mémoire GPU, cf. le fix crash Safari).
+    // className= (pas classList) écraserait "mc-populating" déjà posée par populateMiniCard pour
+    // le fondu d'apparition (cf. plus bas) — on la réajoute juste après plutôt que de changer
+    // l'appelant pour ce détail.
     el.className = c.rarity === "legendaire" ? "mini-card metallicss" : "mini-card";
+    el.classList.add("mc-populating");
     el.dataset.rarity = c.rarity;
     var built = buildCardFrameHtml(c);
     var qty = ownedCount(c.id);
@@ -3021,7 +3033,9 @@ body::after {
   // Carte non possédée : silhouette "???" neutre, pas la peine de construire toute la fiche TCG
   // pour un contenu caché.
   function populateLockedMiniCard(el, c) {
+    // même raison qu'en haut de populateOwnedMiniCard : className= écraserait "mc-populating".
     el.className = "mini-card locked";
+    el.classList.add("mc-populating");
     el.dataset.rarity = c.rarity;
     el.innerHTML =
       '<div class="mc-band"></div>' +
@@ -3037,8 +3051,16 @@ body::after {
     if (el.dataset.populated) return;
     el.dataset.populated = "1";
     var owned = isOwned(c.id);
+    // part d'opacity 0 (cf. .mc-populating en CSS), retirée au prochain frame pour laisser le
+    // navigateur peindre cet état initial avant de déclencher la transition vers 1 — sans ce
+    // double rAF, le changement de classe se confondrait avec l'injection du contenu et
+    // n'animerait rien (pas de frame "avant" distincte pour la transition CSS à partir de).
+    el.classList.add("mc-populating");
     if (owned) populateOwnedMiniCard(el, c);
     else populateLockedMiniCard(el, c);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { el.classList.remove("mc-populating"); });
+    });
   }
 
   // Revient à un slot vide (même coût qu'avant tout rendu) pour une mini-card qui sort largement
