@@ -1531,11 +1531,19 @@ body::after {
   background: rgba(5,4,3,0.97);
   display: flex; flex-direction: column; gap: 1px; min-width: 0;
 }
+/* conteneur nom + drapeau : le drapeau reste toujours visible à droite (flex: none), le nom
+   garde son ellipsis existant en se réduisant sur l'espace restant (min-width: 0). */
+.rc-move-band-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px; min-width: 0;
+}
 .rc-move-band {
-  display: block; min-width: 0;
+  display: block; min-width: 0; flex: 1 1 auto;
   font-family: var(--font-display); font-weight: 400; font-size: 15px;
   text-transform: uppercase; color: var(--ink); letter-spacing: 0.005em;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rc-move-flag {
+  flex: none; font-size: 14px; line-height: 1;
 }
 .rc-move-lbl {
   display: block;
@@ -2658,6 +2666,17 @@ body::after {
   function genreHolo(genre) {
     return GENRE_HOLO[genre] || ["#b8975a", "#241f14", "#e0c48a"];
   }
+  // Convertit un code pays ISO 3166-1 alpha-2 ("US", "GB"...) en emoji drapeau, en combinant les
+  // deux "regional indicator symbols" Unicode correspondants (US -> 🇺🇸). Chaîne vide si le code
+  // est absent/invalide, pour ne jamais afficher un caractère cassé sur la carte.
+  function countryFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length !== 2) return "";
+    var code = countryCode.toUpperCase();
+    if (!/^[A-Z]{2}$/.test(code)) return "";
+    var base = 0x1F1E6; // "A" regional indicator
+    return String.fromCodePoint(base + (code.charCodeAt(0) - 65)) +
+           String.fromCodePoint(base + (code.charCodeAt(1) - 65));
+  }
   function genBandLogo(card) {
     var colors = genreHolo(card.genre);
     var main = colors[0];
@@ -3599,7 +3618,10 @@ body::after {
         '</div>' +
         '<div class="rc-photo">' + photoHtml + '</div>' +
         '<div class="rc-move-top">' +
-          '<span class="rc-move-band">' + card.name + '</span>' +
+          '<div class="rc-move-band-row">' +
+            '<span class="rc-move-band">' + card.name + '</span>' +
+            (countryFlagEmoji(card.country) ? '<span class="rc-move-flag" aria-hidden="true">' + countryFlagEmoji(card.country) + '</span>' : '') +
+          '</div>' +
           '<span class="rc-move-name">' + card.genre + ' <span class="rc-move-year">(' + card.founded + ')</span></span>' +
         '</div>' +
         '<div class="rc-moves">' +
