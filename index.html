@@ -3319,6 +3319,7 @@ body::after {
   function startOpening(sourceBtn) {
     pullQueue = pickPack(sourceBtn && sourceBtn.dataset.pack);
     pullIndex = -1;
+    packFinalized = false;
     opening.hidden = false;
     var edition = (sourceBtn && sourceBtn.dataset.edition) || "legend";
     packClosed.dataset.edition = edition;
@@ -3489,19 +3490,37 @@ body::after {
       requestAnimationFrame(function () { fitCardMoves(el); });
     });
     tapHint.hidden = false;
+    // Dernière carte du paquet déjà affichée ici (pas seulement après un tap supplémentaire
+    // dessus) : à la fois le bouton "Retour à l'album" ET l'ajout à l'inventaire doivent être
+    // effectifs dès qu'on la voit, pas après avoir tapé une fois de plus dessus pour "valider"
+    // la fin du paquet — sinon un joueur qui tape directement sur "Retour à l'album" sans retap
+    // perdrait les cartes du paquet (jamais ajoutées à addOwned). finalizePackIfDone() est
+    // idempotente (packFinalized), donc un tap supplémentaire sur la dernière carte (qui
+    // retombe dans nextCard() ci-dessous) ne double-compte rien.
+    if (pullIndex >= pullQueue.length - 1) {
+      finalizePackIfDone();
+    }
+  }
+
+  var packFinalized = false;
+
+  function finalizePackIfDone() {
+    if (packFinalized) return;
+    packFinalized = true;
+    tapHint.hidden = true;
+    closeBtn.hidden = false;
+    // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
+    // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
+    pullQueue.forEach(function (c) { addOwned(c.id); });
+    saveOwned();
+    renderGrid();
   }
 
   function nextCard() {
     pullIndex++;
     updateProgressDots();
     if (pullIndex >= pullQueue.length) {
-      tapHint.hidden = true;
-      closeBtn.hidden = false;
-      // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
-      // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
-      pullQueue.forEach(function (c) { addOwned(c.id); });
-      saveOwned();
-      renderGrid();
+      finalizePackIfDone();
       return;
     }
     revealCurrentCard();
