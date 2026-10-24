@@ -3249,8 +3249,13 @@ body::after {
     return groups;
   }
 
+  // Tire une carte au hasard dans le groupe ET LA RETIRE (splice) du tableau, pour qu'elle ne
+  // puisse plus ressortir plus tard dans le même paquet (groups[] est partagé entre les 5
+  // tirages d'un même pickPack, donc ce retrait est ce qui garantit l'absence de doublon — sans
+  // lui, deux tirages de la même rareté pouvaient retomber sur la même carte par hasard).
   function pickOneFromGroup(group) {
-    return group[Math.floor(Math.random() * group.length)];
+    var idx = Math.floor(Math.random() * group.length);
+    return group.splice(idx, 1)[0];
   }
 
   // packKind : "daily" (ou absent) pioche dans tout CARDS comme avant ; "musicians" restreint
@@ -3801,6 +3806,14 @@ body::after {
 
   closeBtn.addEventListener("click", function () {
     opening.hidden = true;
+    // "Retour à l'album" doit réellement y ramener, pas juste fermer l'ouverture : sans ça on
+    // retombait sur l'onglet resté actif depuis AVANT l'ouverture du paquet (celui des Paquets,
+    // puisque c'est de là qu'on ouvre), ce qui contredisait le texte du bouton. On resimule donc
+    // un clic sur l'onglet Album plutôt que dupliquer ici la logique de tabBtns (classes
+    // active + hidden des 3 vues), pour garder une seule source de vérité sur comment basculer
+    // de vue.
+    var albumTabBtn = document.querySelector('.tab-btn[data-view="album"]');
+    if (albumTabBtn) albumTabBtn.click();
   });
 })();
 </script>
