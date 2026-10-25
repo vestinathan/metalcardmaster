@@ -1055,10 +1055,33 @@ body::after {
    .reveal-card) reprendre la main sans lutter avec cette keyframe. Le flash lumineux (.rc-flip-
    flash) est un enfant séparé plutôt qu'un pseudo-élément, pour pouvoir le superposer au-dessus
    du cadre (z-index) sans dépendre d'un ::after déjà pris par d'autres raretés. */
-.reveal-card.flipping { animation: cardFlipIn 1.1s cubic-bezier(.25,.8,.3,1) both; }
+/* Deux variantes du même flip, miroir l'une de l'autre : cardFlipIn tourne depuis -90deg, ce qui
+   fait pivoter l'arête GAUCHE de la carte vers la caméra en premier — effet visuel "la carte
+   vient de la gauche". cardFlipInReverse tourne depuis +90deg, arête DROITE en premier — "vient
+   de la droite" (géométrie rotateY standard : angle positif = le côté droit s'avance).
+   .flip-from-right (carte suivante, swipe droite→gauche du doigt, la nouvelle carte doit sembler
+   arriver depuis la droite) utilise donc la variante +90deg (cardFlipInReverse) ; .flip-from-left
+   (carte précédente, swipe gauche→droite du doigt, doit sembler venir de la gauche) utilise la
+   variante -90deg (cardFlipIn) — posées en JS dans revealCurrentCard() selon le sens de
+   navigation (nextCard/prevCard), cf. plus bas. Avant ce changement les deux directions jouaient
+   exactement la même rotation (demande explicite d'une session précédente, pour que gauche/droite
+   se ressemblent) ; la demande est maintenant que le sens du flip suive le geste, donc on les
+   distingue à nouveau mais en gardant tout le reste (timing, easing, scale) strictement
+   identique entre les deux. */
+.reveal-card.flipping.flip-from-right { animation: cardFlipInReverse 1.1s cubic-bezier(.25,.8,.3,1) both; }
+.reveal-card.flipping.flip-from-left { animation: cardFlipIn 1.1s cubic-bezier(.25,.8,.3,1) both; }
+/* pas de .flip-from-* posée (ex. tout premier appel de revealCurrentCard() à l'ouverture d'un
+   paquet, sans swipe précédent) : retombe sur la même rotation qu'avant, -90deg par défaut. */
+.reveal-card.flipping:not(.flip-from-left):not(.flip-from-right) { animation: cardFlipIn 1.1s cubic-bezier(.25,.8,.3,1) both; }
 @keyframes cardFlipIn {
   0% { opacity: 0; transform: rotateY(-90deg) scale(0.88); }
   38% { opacity: 1; transform: rotateY(-90deg) scale(0.94); }
+  62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
+  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
+@keyframes cardFlipInReverse {
+  0% { opacity: 0; transform: rotateY(90deg) scale(0.88); }
+  38% { opacity: 1; transform: rotateY(90deg) scale(0.94); }
   62% { opacity: 1; transform: rotateY(0deg) scale(0.94); }
   100% { opacity: 1; transform: rotateY(0deg) scale(1); }
 }
@@ -3449,9 +3472,13 @@ body::after {
   }
 
   // Construit, insère et joue l'animation d'entrée (flip, ou voile de fumée pour les légendaires)
-  // de la carte à pullQueue[pullIndex] — partagé entre nextCard() et le retour en arrière au
-  // swipe droite, pour que les deux directions jouent exactement la même animation de reveal.
-  function revealCurrentCard() {
+  // de la carte à pullQueue[pullIndex] — partagé entre nextCard() et prevCard(). direction vaut
+  // "next" (swipe gauche, carte suivante : flip depuis la droite, .flip-from-right) ou "prev"
+  // (swipe droite, carte précédente : flip depuis la gauche, .flip-from-left), undefined pour le
+  // tout premier appel à l'ouverture du paquet (retombe sur la rotation par défaut, cf. CSS).
+  // Avant, les deux sens jouaient la même rotation fixe (demande explicite d'une session
+  // précédente) ; la demande est maintenant que le flip suive visuellement le sens du geste.
+  function revealCurrentCard(direction) {
     var card = pullQueue[pullIndex];
     var el = buildRevealCard(card);
     stage.appendChild(el);
@@ -3468,6 +3495,8 @@ body::after {
     // @keyframes animation ici.
     requestAnimationFrame(function () {
       el.classList.add("showing", "flipping");
+      if (direction === "next") el.classList.add("flip-from-right");
+      else if (direction === "prev") el.classList.add("flip-from-left");
       // Légendaire : tremblement d'écran posé sur .stage (pas sur la carte, pour ne pas interférer
       // avec le tilt au doigt) pendant toute la dissipation de fumée — posé ici plutôt que par un
       // sélecteur CSS descendant, car .stage n'est pas un ancêtre de .reveal-card dans un sens que
@@ -3481,7 +3510,7 @@ body::after {
       // soit jamais en concurrence avec la keyframe CSS (qui, elle, anime .transform via
       // @keyframes et gagnerait sinon indéfiniment face au style inline sur les frames suivantes).
       el.addEventListener("animationend", function onFlipEnd(e) {
-        if (e.animationName === "cardFlipIn" || e.animationName === "cardRevealLegend") {
+        if (e.animationName === "cardFlipIn" || e.animationName === "cardFlipInReverse" || e.animationName === "cardRevealLegend") {
           el.classList.remove("flipping");
           stage.classList.remove("legendary-shake");
           el.removeEventListener("animationend", onFlipEnd);
@@ -3523,18 +3552,19 @@ body::after {
       finalizePackIfDone();
       return;
     }
-    revealCurrentCard();
+    revealCurrentCard("next");
   }
 
-  // Retour arrière (swipe droite) : rejoue la même animation d'entrée que nextCard() sur la
-  // carte précédente du paquet, pour que les deux directions de swipe soient visuellement
-  // cohérentes (flip / voile de fumée), au lieu d'un simple fondu statique.
+  // Retour arrière (swipe droite) : rejoue la même famille d'animation d'entrée que nextCard()
+  // sur la carte précédente du paquet (flip / voile de fumée selon la rareté), mais avec le
+  // flip en sens inverse ("prev", cf. revealCurrentCard) pour que la carte semble visuellement
+  // arriver du même côté que le doigt qui swipe.
   function prevCard() {
     if (pullIndex <= 0) return;
     pullIndex--;
     updateProgressDots();
     closeBtn.hidden = true;
-    revealCurrentCard();
+    revealCurrentCard("prev");
   }
 
   // extrait 2 teintes vibrantes dominantes du logo du groupe (quand il existe) pour teinter le
