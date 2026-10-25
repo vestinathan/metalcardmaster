@@ -172,6 +172,15 @@ body::after {
 .view { padding: 20px max(20px, env(safe-area-inset-left, 0px)) 104px max(20px, env(safe-area-inset-right, 0px)); flex: 1; }
 .view[hidden] { display: none; }
 
+/* ---------- Progression album (ex: "12 / 250 cartes") ---------- */
+.album-progress {
+  text-align: center;
+  font-family: var(--font-label); font-size: 12px; letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  margin-bottom: 14px;
+}
+.album-progress b { color: var(--accent); font-weight: 600; }
+
 /* ---------- Filters ---------- */
 .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
@@ -1908,6 +1917,7 @@ body::after {
 
   <!-- ===== VUE ALBUM ===== -->
   <main class="view" id="view-album">
+    <div class="album-progress" id="albumProgress"></div>
     <div class="filters" id="filters"></div>
     <div class="grid" id="grid"></div>
   </main>
@@ -3612,16 +3622,39 @@ body::after {
   var filtersEl = document.getElementById("filters");
   var filterChips = {};
 
+  // Renvoie {owned, total} pour un filtre donné : total = nombre de cartes de cette rareté
+  // (ou toutes si "Tous"), owned = combien de ces cartes sont possédées (qty >= 1), pour
+  // afficher "3/62" plutôt que juste "62" sur chaque chip.
   function filterCount(f) {
-    if (f === "Tous") return CARDS.length;
-    var key = rarityKeyByLabel[f];
-    return CARDS.filter(function (c) { return c.rarity === key; }).length;
+    var pool = f === "Tous" ? CARDS : CARDS.filter(function (c) { return c.rarity === rarityKeyByLabel[f]; });
+    var owned = pool.filter(function (c) { return isOwned(c.id); }).length;
+    return { owned: owned, total: pool.length };
+  }
+
+  function albumProgressLabel() {
+    var owned = ownedIdsList().length;
+    return owned + " / " + CARDS.length + " cartes";
+  }
+
+  function renderAlbumProgress() {
+    var el = document.getElementById("albumProgress");
+    if (el) el.innerHTML = "<b>" + ownedIdsList().length + "</b> / " + CARDS.length + " cartes";
+  }
+
+  function renderFilterChips() {
+    FILTERS.forEach(function (f) {
+      var chip = filterChips[f];
+      if (!chip) return;
+      var c = filterCount(f);
+      chip.textContent = f + " (" + c.owned + "/" + c.total + ")";
+    });
   }
 
   FILTERS.forEach(function (f) {
     var chip = document.createElement("button");
     chip.className = "chip" + (f === "Tous" ? " active" : "");
-    chip.textContent = f + " (" + filterCount(f) + ")";
+    var c0 = filterCount(f);
+    chip.textContent = f + " (" + c0.owned + "/" + c0.total + ")";
     chip.addEventListener("click", function () {
       activeFilter = f;
       filtersEl.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("active"); });
@@ -3793,6 +3826,8 @@ body::after {
     : null;
 
   function renderGrid() {
+    renderAlbumProgress();
+    renderFilterChips();
     if (gridObserver) gridObserver.disconnect();
     if (gridUnloadObserver) gridUnloadObserver.disconnect();
     gridEl.innerHTML = "";
