@@ -561,6 +561,7 @@ body::after {
     linear-gradient(175deg, color-mix(in srgb, var(--alloy-ultra-b) 45%, var(--surface)) 0%, var(--surface) 55%, #0c0a08 100%);
 }
 .booster.locked .booster-body { filter: grayscale(0.9) brightness(0.5); }
+.booster.locked .booster-full-art { filter: grayscale(0.9) brightness(0.5); }
 
 /* grain papier, cohérent avec le reste de l'app */
 .booster-body::before {
@@ -659,8 +660,21 @@ body::after {
   color: var(--accent);
 }
 .booster.locked .booster-status { color: var(--ink-dim); }
+
+/* pastille de stock (ex: "3/4") posée sur le coin de la pochette, même grammaire que
+   .booster-lock-icon (médaillon sombre rond) mais côté opposé pour ne jamais se superposer. */
+.booster-stock-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 7;
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px;
+  background: rgba(5,4,3,0.6); border: 1px solid rgba(255,255,255,0.14);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-label); font-size: 10px; font-weight: 400; letter-spacing: 0.03em;
+  color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.booster.locked .booster-stock-badge { color: rgba(249,234,211,0.55); }
 .booster-lock-icon {
-  position: absolute; top: 10px; right: 10px; z-index: 5;
+  position: absolute; top: 10px; right: 10px; z-index: 7;
   width: 22px; height: 22px; border-radius: 50%;
   background: rgba(5,4,3,0.55); display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: rgba(249,234,211,0.75);
@@ -3049,6 +3063,7 @@ body::after {
       btn.classList.add("active");
       Object.keys(views).forEach(function (k) { views[k].hidden = (k !== btn.dataset.view); });
       if (btn.dataset.view === "friends") refreshFriendsView();
+      if (btn.dataset.view === "packs") refreshPackStockUI();
     });
   });
 
@@ -3184,6 +3199,7 @@ body::after {
     if (user) {
       pullOwnedFromCloud();
       loadMyFriendCode();
+      refreshPackStockUI();
     }
   }
 
@@ -3943,6 +3959,118 @@ body::after {
     return pulled;
   }
 
+  // ---- Stock de paquets (pack_stock côté serveur, régénération 1/6h plafonnée à 4) ----
+  // Source de vérité exclusivement côté serveur (RPC refill_pack_stock / consume_pack) : le
+  // client n'affiche et ne décompte jamais un stock recalculé localement, seulement ce que le
+  // serveur a renvoyé en dernier (pack_stockState[kind].available), plus un décompte visuel du
+  // timer dérivé de seconds_until_next (cf. tickPackCountdown).
+  var PACK_KINDS = ["daily", "musicians"];
+  var packStockState = {}; // { daily: {available, secondsUntilNext}, musicians: {...} }
+  var packCountdownTimer = null;
+
+  function boosterBtnFor(kind) { return document.querySelector('.booster[data-pack="' + kind + '"]'); }
+
+  function ensureBoosterBadges(btn) {
+    var body = btn.querySelector(".booster-body");
+    if (!body) return {};
+    var badge = body.querySelector(".booster-stock-badge");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "booster-stock-badge";
+      badge.hidden = true;
+      body.appendChild(badge);
+    }
+    var lock = body.querySelector(".booster-lock-icon");
+    if (!lock) {
+      lock = document.createElement("div");
+      lock.className = "booster-lock-icon";
+      lock.textContent = "⏳";
+      lock.hidden = true;
+      body.appendChild(lock);
+    }
+    return { badge: badge, lock: lock };
+  }
+
+  function formatCountdown(seconds) {
+    if (seconds == null || seconds < 0) seconds = 0;
+    var h = Math.floor(seconds / 3600);
+    var m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return "Prochain paquet dans " + h + "h " + m + "min";
+    if (m > 0) return "Prochain paquet dans " + m + "min";
+    return "Prochain paquet dans <1min";
+  }
+
+  // Applique un état déjà connu (available/secondsUntilNext) au DOM d'un booster donné, sans
+  // appeler le serveur — utilisé après consume_pack et à chaque tick du countdown local.
+  function renderPackStock(kind) {
+    var btn = boosterBtnFor(kind);
+    if (!btn) return;
+    var state = packStockState[kind];
+    var els = ensureBoosterBadges(btn);
+    var statusEl = btn.parentElement ? btn.parentElement.querySelector(".booster-status") : null;
+    if (!state) {
+      // Pas encore d'état connu (hors ligne / pas connecté) : ne rien afficher, comportement
+      // actuel (ouverture illimitée) inchangé.
+      if (els.badge) els.badge.hidden = true;
+      if (els.lock) els.lock.hidden = true;
+      btn.classList.remove("locked");
+      btn.disabled = false;
+      return;
+    }
+    if (state.available > 0) {
+      btn.disabled = false;
+      btn.classList.remove("locked");
+      if (els.lock) els.lock.hidden = true;
+      if (els.badge) {
+        els.badge.hidden = false;
+        els.badge.textContent = state.available + "/4";
+      }
+      if (statusEl) statusEl.textContent = "5 cartes · disponible";
+    } else {
+      btn.disabled = true;
+      btn.classList.add("locked");
+      if (els.badge) els.badge.hidden = true;
+      if (els.lock) els.lock.hidden = false;
+      if (statusEl) statusEl.textContent = formatCountdown(state.secondsUntilNext);
+    }
+  }
+
+  function startPackCountdownTicker() {
+    if (packCountdownTimer) return;
+    packCountdownTimer = setInterval(function () {
+      var needsRefill = [];
+      PACK_KINDS.forEach(function (kind) {
+        var state = packStockState[kind];
+        if (!state || state.available > 0 || state.secondsUntilNext == null) return;
+        state.secondsUntilNext = Math.max(0, state.secondsUntilNext - 1);
+        if (state.secondsUntilNext === 0) {
+          needsRefill.push(kind);
+        } else {
+          renderPackStock(kind);
+        }
+      });
+      needsRefill.forEach(function (kind) { refreshPackStockUI(kind); });
+    }, 1000);
+  }
+
+  // Interroge refill_pack_stock côté serveur pour un paquet (ou les deux si kind omis) et met
+  // à jour l'affichage. N'écrit jamais de valeur locale extrapolée : seulement ce que le
+  // serveur renvoie.
+  function refreshPackStockUI(kind) {
+    if (!supa || !currentUser) return; // cas limite : pas censé arriver (auth gate obligatoire)
+    var kinds = kind ? [kind] : PACK_KINDS;
+    kinds.forEach(function (k) {
+      supa.rpc("refill_pack_stock", { p_pack_kind: k }).then(function (res) {
+        if (res.error || !res.data) return;
+        var row = Array.isArray(res.data) ? res.data[0] : res.data;
+        if (!row) return;
+        packStockState[k] = { available: row.available, secondsUntilNext: row.seconds_until_next };
+        renderPackStock(k);
+        startPackCountdownTicker();
+      }).catch(function () {});
+    });
+  }
+
   document.querySelectorAll(".booster").forEach(function (btn) {
     btn.addEventListener("click", function () {
       if (btn.disabled) return;
@@ -3954,7 +4082,63 @@ body::after {
   // pour que .pack-closed affiche toujours le même alliage/contenu que le paquet ouvert —
   // rien n'est codé en dur ici, tout vient du DOM du booster source. data-pack détermine le
   // pool de tirage (cf. pickPack).
+  // Avant toute ouverture réelle, consulte consume_pack (source de vérité anti-triche côté
+  // serveur) : -1 = stock épuisé, l'ouverture est refusée même si l'affichage local semblait
+  // encore permettre le clic (concurrence multi-onglets, timing limite). Pas de async/await
+  // ici, cohérent avec le style .then() déjà utilisé pour supa.rpc ailleurs dans le fichier.
   function startOpening(sourceBtn) {
+    var packKind = sourceBtn && sourceBtn.dataset.pack;
+    if (supa && currentUser && packKind) {
+      if (sourceBtn) sourceBtn.disabled = true; // anti-double-clic pendant l'aller-retour serveur
+      supa.rpc("consume_pack", { p_pack_kind: packKind }).then(function (res) {
+        if (res.error) {
+          if (sourceBtn) sourceBtn.disabled = false;
+          return;
+        }
+        var remaining = res.data;
+        if (remaining === -1) {
+          showPackRefusedMessage(sourceBtn);
+          refreshPackStockUI(packKind);
+          return;
+        }
+        packStockState[packKind] = packStockState[packKind] || {};
+        packStockState[packKind].available = remaining;
+        packStockState[packKind].secondsUntilNext = remaining > 0 ? null : packStockState[packKind].secondsUntilNext;
+        if (remaining === 0) {
+          // Stock tombé à 0 avec cette ouverture : on ne connaît pas encore le vrai
+          // seconds_until_next (le serveur ne le renvoie pas via consume_pack), donc on
+          // redemande l'état réel tout de suite pour afficher le bon timer.
+          refreshPackStockUI(packKind);
+        } else {
+          renderPackStock(packKind);
+        }
+        if (sourceBtn) sourceBtn.disabled = false;
+        proceedWithOpening(sourceBtn);
+      }).catch(function () {
+        if (sourceBtn) sourceBtn.disabled = false;
+      });
+      return;
+    }
+    // Pas connecté / Supabase indisponible : cas limite qui ne devrait jamais se produire vu
+    // l'auth gate obligatoire — on ne bloque pas l'app, comportement actuel (illimité) conservé.
+    proceedWithOpening(sourceBtn);
+  }
+
+  function showPackRefusedMessage(sourceBtn) {
+    var statusEl = sourceBtn && sourceBtn.parentElement ? sourceBtn.parentElement.querySelector(".booster-status") : null;
+    if (!statusEl) return;
+    var previous = statusEl.textContent;
+    statusEl.textContent = "Plus de paquet disponible, reviens plus tard !";
+    setTimeout(function () {
+      // Ne réécrase le message que s'il n'a pas déjà été remplacé par le vrai countdown reçu
+      // de refreshPackStockUI entre-temps.
+      if (statusEl.textContent === "Plus de paquet disponible, reviens plus tard !") {
+        statusEl.textContent = previous;
+      }
+    }, 2500);
+  }
+
+  function proceedWithOpening(sourceBtn) {
     pullQueue = pickPack(sourceBtn && sourceBtn.dataset.pack);
     pullIndex = -1;
     packFinalized = false;
