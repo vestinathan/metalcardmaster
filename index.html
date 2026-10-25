@@ -3178,16 +3178,26 @@ body::after {
     if (!supa || !currentUser) return;
     supa.from("owned_cards").select("card_counts").eq("user_id", currentUser.id).maybeSingle()
       .then(function (res) {
+        // IMPORTANT : ne jamais traiter une erreur réseau/RLS comme "compte neuf" — res.data est
+        // null dans les deux cas, mais seule l'ABSENCE RÉELLE de ligne (res.error est null/absent)
+        // signifie vraiment "ce compte n'a encore rien côté serveur". Une erreur silencieuse ne
+        // doit jamais déclencher l'écrasement à {} ni une resynchro vers le cloud, sous peine de
+        // détruire une vraie collection existante suite à un simple souci réseau passager.
+        if (res.error) {
+          if (accountSyncStatusEl) accountSyncStatusEl.textContent = "Erreur de synchronisation.";
+          return;
+        }
         if (res.data) {
           // Le compte a déjà une ligne owned_cards côté serveur (reconnexion sur un appareil déjà
           // utilisé, ou appareil différent avec le même compte) : fusion légitime avec le
           // localStorage de CET appareil, par le MAX (cf. commentaire de mergeOwned ci-dessus).
           mergeOwned(res.data.card_counts || {});
         } else {
-          // Première connexion de ce compte, rien côté serveur : un localStorage préexistant sur
-          // cet appareil/navigateur (parties jouées avant de créer ce compte, ou avec un autre
-          // compte) n'appartient PAS à ce nouveau compte — le fusionner lui ferait hériter de
-          // cartes qu'il n'a jamais tirées. On repart de zéro et on écrase le localStorage local.
+          // Première connexion de ce compte, rien côté serveur (confirmé : pas d'erreur, la ligne
+          // n'existe vraiment pas) : un localStorage préexistant sur cet appareil/navigateur
+          // (parties jouées avant de créer ce compte, ou avec un autre compte) n'appartient PAS à
+          // ce nouveau compte — le fusionner lui ferait hériter de cartes qu'il n'a jamais tirées.
+          // On repart de zéro et on écrase le localStorage local.
           ownedCounts = {};
           saveOwnedLocalOnly();
         }
