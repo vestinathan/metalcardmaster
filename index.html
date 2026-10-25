@@ -3118,7 +3118,11 @@ body::after {
   // carte, on garde le MAX des deux quantités plutôt qu'une simple union de présence — sinon un
   // appareil qui aurait tiré 3 exemplaires d'une carte perdrait ce compte au profit d'un autre
   // appareil n'en ayant qu'1 (addition aurait aussi été fausse : compterait les tirages déjà
-  // synchronisés deux fois à chaque connexion croisée entre appareils).
+  // synchronisés deux fois à chaque connexion croisée entre appareils). N'appeler cette fonction
+  // que quand le compte a DÉJÀ une ligne owned_cards côté serveur (cf. pullOwnedFromCloud) : pour
+  // un compte flambant neuf, fusionner reviendrait à lui faire hériter d'un localStorage qui
+  // n'est pas le sien (parties jouées avant la création du compte, ou avec un autre compte sur le
+  // même appareil/navigateur).
   function mergeOwned(remoteCounts) {
     remoteCounts = remoteCounts || {};
     var merged = {};
@@ -3153,8 +3157,19 @@ body::after {
     if (!supa || !currentUser) return;
     supa.from("owned_cards").select("card_counts").eq("user_id", currentUser.id).maybeSingle()
       .then(function (res) {
-        var remoteCounts = (res.data && res.data.card_counts) || {};
-        mergeOwned(remoteCounts);
+        if (res.data) {
+          // Le compte a déjà une ligne owned_cards côté serveur (reconnexion sur un appareil déjà
+          // utilisé, ou appareil différent avec le même compte) : fusion légitime avec le
+          // localStorage de CET appareil, par le MAX (cf. commentaire de mergeOwned ci-dessus).
+          mergeOwned(res.data.card_counts || {});
+        } else {
+          // Première connexion de ce compte, rien côté serveur : un localStorage préexistant sur
+          // cet appareil/navigateur (parties jouées avant de créer ce compte, ou avec un autre
+          // compte) n'appartient PAS à ce nouveau compte — le fusionner lui ferait hériter de
+          // cartes qu'il n'a jamais tirées. On repart de zéro et on écrase le localStorage local.
+          ownedCounts = {};
+          saveOwnedLocalOnly();
+        }
         syncOwnedToCloud();
         renderGrid();
         renderAccountStats();
