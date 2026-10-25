@@ -3158,11 +3158,31 @@ body::after {
     try { localStorage.setItem("grimoire-owned-counts", JSON.stringify(ownedCounts)); } catch (e) {}
   }
 
+  // Convertit {id: qty, ...} en tableau plat avec chaque id répété "qty" fois — c'est le format
+  // réel de la colonne owned_cards.card_ids côté Supabase (ARRAY, pas de colonne card_counts/
+  // jsonb : vérifié directement sur le schéma réel de la table, qui ne correspondait plus à ce
+  // que ce code supposait). Préserve les quantités (nécessaires pour les échanges, cf. isOwned/
+  // ownedCount/addOwned) sans avoir besoin d'une colonne jsonb séparée.
+  function ownedCountsToIdsArray() {
+    var arr = [];
+    Object.keys(ownedCounts).forEach(function (id) {
+      var qty = ownedCounts[id] || 0;
+      for (var i = 0; i < qty; i++) arr.push(id);
+    });
+    return arr;
+  }
+  // Conversion inverse : un tableau plat d'ids (avec doublons = quantité) vers {id: qty, ...}.
+  function idsArrayToOwnedCounts(arr) {
+    var counts = {};
+    (arr || []).forEach(function (id) { counts[id] = (counts[id] || 0) + 1; });
+    return counts;
+  }
+
   function syncOwnedToCloud() {
     if (!supa || !currentUser || cloudSyncInFlight) return;
     cloudSyncInFlight = true;
     supa.from("owned_cards")
-      .upsert({ user_id: currentUser.id, card_counts: ownedCounts }, { onConflict: "user_id" })
+      .upsert({ user_id: currentUser.id, card_ids: ownedCountsToIdsArray() }, { onConflict: "user_id" })
       .then(function (res) {
         cloudSyncInFlight = false;
         if (res.error && accountSyncStatusEl) {
@@ -3176,7 +3196,7 @@ body::after {
 
   function pullOwnedFromCloud() {
     if (!supa || !currentUser) return;
-    supa.from("owned_cards").select("card_counts").eq("user_id", currentUser.id).maybeSingle()
+    supa.from("owned_cards").select("card_ids").eq("user_id", currentUser.id).maybeSingle()
       .then(function (res) {
         // IMPORTANT : ne jamais traiter une erreur réseau/RLS comme "compte neuf" — res.data est
         // null dans les deux cas, mais seule l'ABSENCE RÉELLE de ligne (res.error est null/absent)
@@ -3191,7 +3211,9 @@ body::after {
           // Le compte a déjà une ligne owned_cards côté serveur (reconnexion sur un appareil déjà
           // utilisé, ou appareil différent avec le même compte) : fusion légitime avec le
           // localStorage de CET appareil, par le MAX (cf. commentaire de mergeOwned ci-dessus).
-          mergeOwned(res.data.card_counts || {});
+          // card_ids est un ARRAY plat (chaque id répété "qty" fois, cf. ownedCountsToIdsArray) —
+          // on le reconvertit en {id: qty} avant de fusionner.
+          mergeOwned(idsArrayToOwnedCounts(res.data.card_ids));
         } else {
           // Première connexion de ce compte, rien côté serveur (confirmé : pas d'erreur, la ligne
           // n'existe vraiment pas) : un localStorage préexistant sur cet appareil/navigateur
