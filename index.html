@@ -850,6 +850,179 @@ body::after {
 .account-signout { margin-top: 4px; }
 
 /* ==========================================================================
+   AMIS — même grammaire que .account-* (verre liquide, boutons/inputs
+   identiques) pour rester cohérent avec le reste de l'app, pas de style ad hoc.
+   ========================================================================== */
+.friends-panel {
+  max-width: 420px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+.friends-section-title {
+  text-align: left;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+.friends-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.friends-code {
+  flex: 1;
+  font-family: var(--font-metal);
+  font-size: 20px;
+  letter-spacing: 0.12em;
+  text-align: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  color: var(--accent);
+}
+.friends-copy-btn { width: auto; flex: none; padding: 12px 18px; }
+.friends-add-form { flex-direction: row; }
+.friends-add-form .account-btn { width: auto; flex: none; }
+.friends-list { display: flex; flex-direction: column; gap: 10px; }
+.friends-empty {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-align: center;
+  padding: 14px 0;
+}
+/* carte ami / échange — même grammaire que .account-stat (verre, liseré fin) */
+.friend-row, .trade-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  cursor: pointer;
+}
+.trade-row { cursor: default; flex-wrap: wrap; }
+.friend-row-code {
+  font-family: var(--font-metal);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.friend-row-arrow { color: var(--ink-dim); font-size: 14px; }
+.trade-row-desc {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink);
+  flex: 1 1 100%;
+}
+.trade-row-desc b { color: var(--accent); font-weight: 600; }
+.trade-row-actions { display: flex; gap: 8px; }
+.trade-row-actions .account-btn {
+  width: auto; flex: none;
+  font-size: 12px; padding: 8px 14px;
+}
+
+/* Vue détail collection d'un ami — même habillage plein écran que .card-zoom */
+.friend-detail {
+  position: fixed; inset: 0; z-index: 90;
+  background:
+    radial-gradient(ellipse 120% 70% at 50% 15%, rgba(237,32,46,0.14), transparent 60%),
+    radial-gradient(circle at 50% 100%, #15110d, #090807 75%);
+  display: flex; flex-direction: column;
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  overflow-y: auto;
+}
+.friend-detail[hidden] { display: none; }
+.friend-detail-head {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 18px;
+}
+.friend-detail-back { width: auto; flex: none; padding: 10px 14px; font-size: 13px; }
+.friend-detail-title { margin: 0; font-size: 18px; text-align: left; }
+.friends-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+/* mini-vignette de carte d'ami, lecture seule — volontairement plus légère que .mini-card
+   (pas de buildCardFrameHtml/canvas metallicss ici : ce sont des dizaines de vignettes dans une
+   vue qui peut s'ouvrir souvent, le coût GPU de la fiche TCG complète par ami n'en vaut pas la
+   peine ; seule la grille principale (ses propres cartes) justifie ce coût). */
+.friend-mini-card {
+  aspect-ratio: 5/7;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  text-align: center;
+  position: relative;
+}
+.friend-mini-card.locked { opacity: 0.3; filter: grayscale(0.7); }
+.friend-mini-card .fmc-name {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.friend-mini-card .fmc-rarity {
+  font-family: var(--font-metal);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.friend-mini-card .fmc-tradebtn {
+  position: absolute; bottom: 6px; left: 6px; right: 6px;
+  font-family: var(--font-body);
+  font-size: 10px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* Modale de proposition d'échange — overlay simple par-dessus tout, même grammaire de verre */
+.trade-modal {
+  position: fixed; inset: 0; z-index: 110;
+  background: rgba(5,4,3,0.72);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.trade-modal[hidden] { display: none; }
+.trade-modal-panel {
+  width: 100%; max-width: 360px;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 60%),
+    color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(18px) saturate(1.3);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,0.7);
+}
+.trade-modal-title { font-size: 18px; margin: 0 0 14px; }
+.friends-field-label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+  margin-top: 4px;
+}
+
+/* ==========================================================================
    OPENING SEQUENCE — overlay plein écran
    ========================================================================== */
 .opening {
@@ -1761,6 +1934,79 @@ body::after {
   <!-- ===== VUE COMPTE ===== -->
   <!-- Plus d'état "non connecté" ici : le compte est désormais obligatoire dès l'ouverture (cf.
        #authGate avant .app), donc on ne peut jamais atteindre cette vue sans être connecté. -->
+  <!-- ===== VUE AMIS ===== -->
+  <main class="view" id="view-friends" hidden>
+    <div class="friends-panel" id="friendsPanel">
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Mon code ami</h2>
+        <div class="friends-code-row">
+          <div class="friends-code" id="myFriendCode">········</div>
+          <button class="account-btn account-btn-ghost friends-copy-btn" id="btnCopyFriendCode" type="button">Copier</button>
+        </div>
+        <p class="account-msg" id="friendCodeMsg" hidden></p>
+      </section>
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Ajouter un ami</h2>
+        <form class="account-form friends-add-form" id="formAddFriend">
+          <input class="account-input" id="addFriendInput" type="text" placeholder="Code ami (ex: AB12CD34)" maxlength="8" autocapitalize="characters" autocomplete="off">
+          <button class="account-btn account-btn-primary" type="submit">Ajouter</button>
+        </form>
+        <p class="account-msg" id="addFriendMsg" hidden></p>
+      </section>
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Mes amis</h2>
+        <div class="friends-list" id="friendsList"><p class="friends-empty">Aucun ami pour le moment.</p></div>
+      </section>
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Échanges reçus</h2>
+        <div class="friends-list" id="tradesReceivedList"><p class="friends-empty">Aucun échange reçu.</p></div>
+      </section>
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Échanges envoyés</h2>
+        <div class="friends-list" id="tradesSentList"><p class="friends-empty">Aucun échange envoyé.</p></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Vue détail de la collection d'un ami, plein écran (même habillage que card-zoom) -->
+  <div class="friend-detail" id="friendDetail" hidden>
+    <div class="friend-detail-head">
+      <button class="account-btn account-btn-ghost friend-detail-back" id="closeFriendDetail" type="button">← Retour</button>
+      <h2 class="account-title friend-detail-title" id="friendDetailTitle">Collection de —</h2>
+    </div>
+    <div class="friends-mini-grid" id="friendDetailGrid"></div>
+  </div>
+
+  <!-- Formulaire de proposition d'échange, en overlay simple -->
+  <div class="trade-modal" id="tradeModal" hidden>
+    <div class="trade-modal-panel">
+      <h2 class="account-title trade-modal-title">Proposer un échange</h2>
+      <form class="account-form" id="formProposeTrade">
+        <label class="friends-field-label">Carte offerte</label>
+        <select class="account-input" id="tradeOfferedCard"></select>
+        <label class="friends-field-label">Quantité offerte</label>
+        <input class="account-input" id="tradeOfferedQty" type="number" min="1" value="1">
+        <label class="friends-field-label">Carte demandée (optionnel)</label>
+        <select class="account-input" id="tradeRequestedCard">
+          <option value="">Aucune contrepartie (don)</option>
+        </select>
+        <label class="friends-field-label">Quantité demandée</label>
+        <input class="account-input" id="tradeRequestedQty" type="number" min="1" value="1">
+        <p class="account-msg" id="tradeModalMsg" hidden></p>
+        <div class="account-form-actions">
+          <button class="account-btn account-btn-ghost" id="cancelTradeModal" type="button">Annuler</button>
+          <button class="account-btn account-btn-primary" type="submit">Envoyer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <main class="view" id="view-account" hidden>
     <div class="account-panel">
       <div class="account-signedin" id="accountSignedIn">
@@ -1778,6 +2024,7 @@ body::after {
   <nav class="tabbar">
     <button class="tab-btn active" data-view="album"><span class="tab-icon">▦</span>Album</button>
     <button class="tab-btn" data-view="packs"><span class="tab-icon">◈</span>Paquets</button>
+    <button class="tab-btn" data-view="friends"><span class="tab-icon">⚔</span>Amis</button>
     <button class="tab-btn" data-view="account"><span class="tab-icon">☻</span>Compte</button>
   </nav>
 </div>
@@ -2794,12 +3041,13 @@ body::after {
 
   // ---- Tabs ----
   var tabBtns = document.querySelectorAll(".tab-btn");
-  var views = { album: document.getElementById("view-album"), packs: document.getElementById("view-packs"), account: document.getElementById("view-account") };
+  var views = { album: document.getElementById("view-album"), packs: document.getElementById("view-packs"), friends: document.getElementById("view-friends"), account: document.getElementById("view-account") };
   tabBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {
       tabBtns.forEach(function (b) { b.classList.remove("active"); });
       btn.classList.add("active");
       Object.keys(views).forEach(function (k) { views[k].hidden = (k !== btn.dataset.view); });
+      if (btn.dataset.view === "friends") refreshFriendsView();
     });
   });
 
@@ -2919,6 +3167,7 @@ body::after {
     renderAccountUI();
     if (user) {
       pullOwnedFromCloud();
+      loadMyFriendCode();
     }
   }
 
@@ -2974,6 +3223,356 @@ body::after {
       if (!supa) return;
       supa.auth.signOut();
     });
+  }
+
+  // ---- Amis & échanges (Supabase) ----
+  // Schéma déjà créé côté serveur (profiles/friendships/trades + RPC add_friend_by_code,
+  // get_friend_owned_card_ids, propose_trade, accept_trade, resolve_trade). Un ami ne voit que
+  // la LISTE des cartes qu'on possède (présence), jamais les quantités — cf. RPC
+  // get_friend_owned_card_ids qui ne renvoie que des id, volontairement.
+  var myFriendCodeEl = document.getElementById("myFriendCode");
+  var btnCopyFriendCode = document.getElementById("btnCopyFriendCode");
+  var friendCodeMsgEl = document.getElementById("friendCodeMsg");
+  var formAddFriend = document.getElementById("formAddFriend");
+  var addFriendInput = document.getElementById("addFriendInput");
+  var addFriendMsgEl = document.getElementById("addFriendMsg");
+  var friendsListEl = document.getElementById("friendsList");
+  var tradesReceivedListEl = document.getElementById("tradesReceivedList");
+  var tradesSentListEl = document.getElementById("tradesSentList");
+  var friendDetailEl = document.getElementById("friendDetail");
+  var friendDetailTitleEl = document.getElementById("friendDetailTitle");
+  var friendDetailGridEl = document.getElementById("friendDetailGrid");
+  var closeFriendDetailBtn = document.getElementById("closeFriendDetail");
+  var tradeModalEl = document.getElementById("tradeModal");
+  var formProposeTrade = document.getElementById("formProposeTrade");
+  var tradeOfferedCardEl = document.getElementById("tradeOfferedCard");
+  var tradeOfferedQtyEl = document.getElementById("tradeOfferedQty");
+  var tradeRequestedCardEl = document.getElementById("tradeRequestedCard");
+  var tradeRequestedQtyEl = document.getElementById("tradeRequestedQty");
+  var tradeModalMsgEl = document.getElementById("tradeModalMsg");
+  var cancelTradeModalBtn = document.getElementById("cancelTradeModal");
+
+  var cardsById = {};
+  CARDS.forEach(function (c) { cardsById[c.id] = c; });
+
+  // Cache en mémoire des codes ami déjà résolus (user_id -> friend_code), pour éviter de
+  // refaire un select par ami à chaque rafraîchissement de la liste.
+  var friendCodeCache = {};
+  var currentFriendDetail = null; // { friendId, ownedIds } pour le formulaire d'échange ouvert depuis le détail
+
+  function showFriendMsg(el, text, kind) {
+    if (!el) return;
+    el.textContent = text;
+    el.className = "account-msg" + (kind ? " " + kind : "");
+    el.hidden = !text;
+  }
+
+  // Mappe les codes d'erreur Postgres levés par les RPC vers un message utilisateur clair.
+  var TRADE_ERROR_MESSAGES = {
+    CODE_INTROUVABLE: "Ce code ami n'existe pas.",
+    CODE_PROPRE_COMPTE: "Tu ne peux pas t'ajouter toi-même.",
+    PAS_AMI: "Vous n'êtes pas amis.",
+    DESTINATAIRE_INVALIDE: "Destinataire invalide.",
+    ECHANGE_INTROUVABLE: "Cet échange n'existe plus.",
+    NON_AUTORISE: "Tu n'es pas autorisé à faire cette action.",
+    DEJA_RESOLU: "Cet échange a déjà été résolu.",
+    STOCK_INSUFFISANT_OFFREUR: "L'offreur n'a plus assez d'exemplaires de cette carte.",
+    STOCK_INSUFFISANT_DESTINATAIRE: "Le destinataire n'a plus assez d'exemplaires de la carte demandée."
+  };
+  function friendlyErrorMessage(err) {
+    if (!err) return "Une erreur est survenue.";
+    var raw = String(err.message || err).toUpperCase();
+    for (var code in TRADE_ERROR_MESSAGES) {
+      if (raw.indexOf(code) !== -1) return TRADE_ERROR_MESSAGES[code];
+    }
+    return err.message || "Une erreur est survenue.";
+  }
+
+  function loadMyFriendCode() {
+    if (!supa || !currentUser || !myFriendCodeEl) return;
+    supa.from("profiles").select("friend_code").eq("user_id", currentUser.id).maybeSingle()
+      .then(function (res) {
+        if (res.error || !res.data) return;
+        myFriendCodeEl.textContent = res.data.friend_code;
+      })
+      .catch(function () {});
+  }
+
+  if (btnCopyFriendCode) {
+    btnCopyFriendCode.addEventListener("click", function () {
+      var code = myFriendCodeEl ? myFriendCodeEl.textContent.trim() : "";
+      if (!code || code.indexOf("·") !== -1) return;
+      var done = function () { showFriendMsg(friendCodeMsgEl, "Code copié !", "success"); };
+      var fail = function () { showFriendMsg(friendCodeMsgEl, "Impossible de copier automatiquement — sélectionne le code manuellement.", "error"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(done).catch(fail);
+      } else {
+        try {
+          var ta = document.createElement("textarea");
+          ta.value = code;
+          ta.style.position = "fixed";
+          ta.style.opacity = "0";
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          document.body.removeChild(ta);
+          done();
+        } catch (e) { fail(); }
+      }
+    });
+  }
+
+  if (formAddFriend) {
+    formAddFriend.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (!supa || !currentUser) return;
+      var code = addFriendInput.value.trim();
+      if (!code) return;
+      showFriendMsg(addFriendMsgEl, "Un instant…", null);
+      supa.rpc("add_friend_by_code", { p_code: code }).then(function (res) {
+        if (res.error) {
+          showFriendMsg(addFriendMsgEl, friendlyErrorMessage(res.error), "error");
+        } else {
+          showFriendMsg(addFriendMsgEl, "Ami ajouté !", "success");
+          addFriendInput.value = "";
+          loadFriendsList();
+        }
+      }).catch(function (e) { showFriendMsg(addFriendMsgEl, friendlyErrorMessage(e), "error"); });
+    });
+  }
+
+  // Résout le friend_code d'un user_id (avec cache), puis rend la liste d'amis.
+  function loadFriendsList() {
+    if (!supa || !currentUser || !friendsListEl) return;
+    supa.from("my_friends").select("friend_id, created_at").then(function (res) {
+      if (res.error) {
+        friendsListEl.innerHTML = '<p class="friends-empty">Erreur de chargement.</p>';
+        return;
+      }
+      var rows = res.data || [];
+      if (!rows.length) {
+        friendsListEl.innerHTML = '<p class="friends-empty">Aucun ami pour le moment.</p>';
+        return;
+      }
+      var idsToResolve = rows.map(function (r) { return r.friend_id; }).filter(function (id) { return !friendCodeCache[id]; });
+      var resolve = idsToResolve.length
+        ? supa.from("profiles").select("user_id, friend_code").in("user_id", idsToResolve)
+        : Promise.resolve({ data: [] });
+      resolve.then(function (res2) {
+        (res2.data || []).forEach(function (p) { friendCodeCache[p.user_id] = p.friend_code; });
+        renderFriendsList(rows);
+      }).catch(function () { renderFriendsList(rows); });
+    }).catch(function () {
+      friendsListEl.innerHTML = '<p class="friends-empty">Erreur de chargement.</p>';
+    });
+  }
+
+  function renderFriendsList(rows) {
+    friendsListEl.innerHTML = "";
+    rows.forEach(function (r) {
+      var code = friendCodeCache[r.friend_id] || "········";
+      var row = document.createElement("div");
+      row.className = "friend-row";
+      row.innerHTML = '<span class="friend-row-code">' + code + '</span><span class="friend-row-arrow">Voir la collection →</span>';
+      row.addEventListener("click", function () { openFriendDetail(r.friend_id, code); });
+      friendsListEl.appendChild(row);
+    });
+  }
+
+  function openFriendDetail(friendId, friendCode) {
+    if (!supa) return;
+    friendDetailTitleEl.textContent = "Collection de " + friendCode;
+    friendDetailGridEl.innerHTML = '<p class="friends-empty">Chargement…</p>';
+    friendDetailEl.hidden = false;
+    supa.rpc("get_friend_owned_card_ids", { p_friend_id: friendId }).then(function (res) {
+      if (res.error) {
+        friendDetailGridEl.innerHTML = '<p class="friends-empty">' + friendlyErrorMessage(res.error) + '</p>';
+        return;
+      }
+      var ownedIds = res.data || [];
+      currentFriendDetail = { friendId: friendId, friendCode: friendCode, ownedIds: ownedIds };
+      renderFriendDetailGrid(ownedIds, friendId, friendCode);
+    }).catch(function (e) {
+      friendDetailGridEl.innerHTML = '<p class="friends-empty">' + friendlyErrorMessage(e) + '</p>';
+    });
+  }
+
+  function renderFriendDetailGrid(ownedIds, friendId, friendCode) {
+    var ownedSet = {};
+    ownedIds.forEach(function (id) { ownedSet[id] = true; });
+    friendDetailGridEl.innerHTML = "";
+    CARDS.forEach(function (c) {
+      var owned = !!ownedSet[c.id];
+      var el = document.createElement("div");
+      el.className = "friend-mini-card" + (owned ? "" : " locked");
+      if (!owned) {
+        el.innerHTML = '<span class="fmc-name">???</span>';
+        friendDetailGridEl.appendChild(el);
+        return;
+      }
+      var canOffer = ownedCount(c.id) >= 1; // exemplaire unique autorisé, cf. choix produit validé
+      el.innerHTML =
+        '<span class="fmc-rarity">' + RARITY_LABEL[c.rarity] + '</span>' +
+        '<span class="fmc-name">' + c.name + '</span>' +
+        (canOffer ? '<button class="fmc-tradebtn" type="button">Offrir / Échanger</button>' : '');
+      if (canOffer) {
+        el.querySelector(".fmc-tradebtn").addEventListener("click", function (ev) {
+          ev.stopPropagation();
+          openTradeModal(friendId, friendCode, c.id);
+        });
+      }
+      friendDetailGridEl.appendChild(el);
+    });
+  }
+
+  if (closeFriendDetailBtn) {
+    closeFriendDetailBtn.addEventListener("click", function () {
+      friendDetailEl.hidden = true;
+      currentFriendDetail = null;
+    });
+  }
+
+  // ---- Formulaire de proposition d'échange ----
+  function openTradeModal(friendId, friendCode, preselectedCardId) {
+    tradeOfferedCardEl.innerHTML = "";
+    ownedIdsList().forEach(function (id) {
+      var c = cardsById[id];
+      if (!c) return;
+      var opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = c.name + " (x" + ownedCount(id) + ")";
+      tradeOfferedCardEl.appendChild(opt);
+    });
+    if (preselectedCardId) tradeOfferedCardEl.value = preselectedCardId;
+
+    tradeRequestedCardEl.innerHTML = '<option value="">Aucune contrepartie (don)</option>';
+    CARDS.forEach(function (c) {
+      var opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      tradeRequestedCardEl.appendChild(opt);
+    });
+
+    tradeOfferedQtyEl.value = 1;
+    tradeRequestedQtyEl.value = 1;
+    showFriendMsg(tradeModalMsgEl, "", null);
+    tradeModalEl.dataset.friendId = friendId;
+    tradeModalEl.dataset.friendCode = friendCode;
+    tradeModalEl.hidden = false;
+  }
+
+  function closeTradeModal() { tradeModalEl.hidden = true; }
+  if (cancelTradeModalBtn) cancelTradeModalBtn.addEventListener("click", closeTradeModal);
+
+  if (formProposeTrade) {
+    formProposeTrade.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      if (!supa) return;
+      var friendId = tradeModalEl.dataset.friendId;
+      var offeredCardId = tradeOfferedCardEl.value;
+      var offeredQty = parseInt(tradeOfferedQtyEl.value, 10) || 1;
+      var requestedCardId = tradeRequestedCardEl.value || null;
+      var requestedQty = requestedCardId ? (parseInt(tradeRequestedQtyEl.value, 10) || 1) : null;
+      if (!offeredCardId) return;
+      showFriendMsg(tradeModalMsgEl, "Envoi…", null);
+      supa.rpc("propose_trade", {
+        p_to_user: friendId,
+        p_offered_card_id: offeredCardId,
+        p_offered_qty: offeredQty,
+        p_requested_card_id: requestedCardId,
+        p_requested_qty: requestedQty
+      }).then(function (res) {
+        if (res.error) {
+          showFriendMsg(tradeModalMsgEl, friendlyErrorMessage(res.error), "error");
+        } else {
+          closeTradeModal();
+          loadTradesLists();
+        }
+      }).catch(function (e) { showFriendMsg(tradeModalMsgEl, friendlyErrorMessage(e), "error"); });
+    });
+  }
+
+  // ---- Échanges en cours (reçus / envoyés) ----
+  function cardLabel(id) {
+    var c = cardsById[id];
+    return c ? c.name : id;
+  }
+
+  function loadTradesLists() {
+    if (!supa || !currentUser) return;
+    supa.from("trades").select("*").eq("to_user", currentUser.id).eq("status", "pending")
+      .then(function (res) { renderTradesReceived(res.data || []); })
+      .catch(function () {});
+    supa.from("trades").select("*").eq("from_user", currentUser.id).eq("status", "pending")
+      .then(function (res) { renderTradesSent(res.data || []); })
+      .catch(function () {});
+  }
+
+  function tradeDescHtml(t) {
+    var offered = "<b>" + t.offered_qty + "x " + cardLabel(t.offered_card_id) + "</b>";
+    var requested = t.requested_card_id ? ("<b>" + t.requested_qty + "x " + cardLabel(t.requested_card_id) + "</b>") : "un don (aucune contrepartie)";
+    return "Offre " + offered + " contre " + requested;
+  }
+
+  function renderTradesReceived(rows) {
+    if (!rows.length) { tradesReceivedListEl.innerHTML = '<p class="friends-empty">Aucun échange reçu.</p>'; return; }
+    tradesReceivedListEl.innerHTML = "";
+    rows.forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "trade-row";
+      row.innerHTML =
+        '<div class="trade-row-desc">' + tradeDescHtml(t) + '</div>' +
+        '<div class="trade-row-actions">' +
+          '<button class="account-btn account-btn-primary" data-action="accept">Accepter</button>' +
+          '<button class="account-btn account-btn-ghost" data-action="decline">Refuser</button>' +
+        '</div>';
+      row.querySelector('[data-action="accept"]').addEventListener("click", function () { acceptTrade(t.id); });
+      row.querySelector('[data-action="decline"]').addEventListener("click", function () { resolveTrade(t.id, "declined"); });
+      tradesReceivedListEl.appendChild(row);
+    });
+  }
+
+  function renderTradesSent(rows) {
+    if (!rows.length) { tradesSentListEl.innerHTML = '<p class="friends-empty">Aucun échange envoyé.</p>'; return; }
+    tradesSentListEl.innerHTML = "";
+    rows.forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "trade-row";
+      row.innerHTML =
+        '<div class="trade-row-desc">' + tradeDescHtml(t) + '</div>' +
+        '<div class="trade-row-actions">' +
+          '<button class="account-btn account-btn-ghost" data-action="cancel">Annuler</button>' +
+        '</div>';
+      row.querySelector('[data-action="cancel"]').addEventListener("click", function () { resolveTrade(t.id, "cancelled"); });
+      tradesSentListEl.appendChild(row);
+    });
+  }
+
+  function acceptTrade(tradeId) {
+    if (!supa) return;
+    supa.rpc("accept_trade", { p_trade_id: tradeId }).then(function (res) {
+      if (res.error) {
+        alert(friendlyErrorMessage(res.error));
+        return;
+      }
+      loadTradesLists();
+      pullOwnedFromCloud(); // rafraîchit l'état local des cartes possédées + l'album/les stats
+    }).catch(function (e) { alert(friendlyErrorMessage(e)); });
+  }
+
+  function resolveTrade(tradeId, newStatus) {
+    if (!supa) return;
+    supa.rpc("resolve_trade", { p_trade_id: tradeId, p_new_status: newStatus }).then(function (res) {
+      if (res.error) { alert(friendlyErrorMessage(res.error)); return; }
+      loadTradesLists();
+    }).catch(function (e) { alert(friendlyErrorMessage(e)); });
+  }
+
+  function refreshFriendsView() {
+    if (!currentUser) return;
+    loadMyFriendCode();
+    loadFriendsList();
+    loadTradesLists();
   }
 
   // ---- Filters ----
