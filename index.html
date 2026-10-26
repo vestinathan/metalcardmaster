@@ -593,14 +593,17 @@ body::after {
    étirée. Les éléments .booster-brand-mark/.booster-count/.booster-art/.booster-edition
    restent dans le DOM (hidden) uniquement pour que startOpening() continue de fonctionner
    sans changement (cf. plus bas, pc-full-art reprend la même logique). */
-.booster:has(.booster-full-art) { aspect-ratio: 0.5699; }
+.booster:has(.booster-full-art) { aspect-ratio: 0.922; }
 .booster:has(.booster-full-art) .booster-body {
   clip-path: none; box-shadow: none; background: none;
 }
 .booster:has(.booster-full-art) .booster-body::before,
 .booster:has(.booster-full-art) .booster-body::after { display: none; }
 .booster-full-art { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
-.booster-full-art img { width: 100%; height: 100%; display: block; }
+/* object-fit: contain, pas "cover" ni un stretch 100%/100% — l'image fournie est déjà détourée
+   (fond transparent) à ses propres proportions de paquet, donc on la fait tenir entière dans le
+   slot sans la déformer, plutôt que de la faire correspondre au ratio du slot comme avant. */
+.booster-full-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 /* logo dans la bande chromée du haut — remplace le texte "Metal Card Master" composé en CSS :
    wordmark fourni par l'utilisateur (même asset que .wordmark-img du header, recoloré en
@@ -610,6 +613,12 @@ body::after {
   display: flex; align-items: center; justify-content: center;
   padding: 0 9%;
 }
+/* même piège que .app[hidden]/.auth-gate[hidden] plus haut dans ce fichier : le display:flex
+   ci-dessus a la même spécificité que le display:none du UA stylesheet pour [hidden], et comme
+   il est déclaré après, il gagne — sans cette règle, .booster-brand-mark[hidden] (cas normal
+   pour un booster en "pleine image", cf. .booster:has(.booster-full-art) juste au-dessus) reste
+   affiché par-dessus l'image fournie. */
+.booster-brand-mark[hidden] { display: none; }
 .booster-brand-mark img {
   width: 100%; height: auto; display: block;
   filter: drop-shadow(0 1px 2px rgba(255,255,255,0.4)) drop-shadow(0 1px 3px rgba(0,0,0,0.3));
@@ -1100,6 +1109,11 @@ body::after {
   display: flex; align-items: center; justify-content: center;
   padding: 0 9%; pointer-events: none;
 }
+/* même piège de spécificité que .booster-brand-mark[hidden] plus haut (ce bloc n'est en fait
+   plus jamais construit pour le paquet unique en "pleine image" actuel, cf. startOpening qui
+   court-circuite packClosed quand .booster-full-art est présent — corrigé ici par défense, pas
+   parce qu'un bug visible a été observé sur cet élément précis). */
+.pc-brand-mark[hidden] { display: none; }
 .pc-brand-mark img {
   width: 100%; height: auto; display: block;
   filter: drop-shadow(0 1px 2px rgba(255,255,255,0.4)) drop-shadow(0 1px 3px rgba(0,0,0,0.3));
