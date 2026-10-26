@@ -4023,8 +4023,23 @@ body::after {
     var scaleEl = el.querySelector(".mc-scale");
     var ratio = el.clientWidth / 300;
     scaleEl.style.transform = "scale(" + ratio + ")";
+    // metallicss(elem) est un calcul SVG+filtres coûteux, documenté comme bloquant le thread
+    // principal de façon synchrone (cf. initMetallicss plus bas) — appelé ici en synchrone, dans
+    // la même tâche que l'injection innerHTML et AVANT le double rAF de populateMiniCard qui
+    // déclenche le fondu d'apparition, il retarde cette frame et produit un à-coup juste au
+    // moment où la carte devrait commencer un fondu doux. Sensible uniquement sur les
+    // légendaires (seule rareté avec metallicss) — d'où le "saccadé" signalé spécifiquement sur
+    // cette rareté. Le reporter via requestAnimationFrame seul ne suffit pas : ça aligne juste le
+    // calcul coûteux sur LA frame de démarrage du fondu CSS, au lieu de le laisser bloquer AVANT —
+    // donc toujours un à-coup, mais déplacé au tout début de la transition au lieu d'avant elle.
+    // On le reporte plutôt après la durée du fondu (180ms, cf. transition CSS ci-dessus) via
+    // setTimeout, pour que l'animation d'apparition se joue sans interruption ; le relief
+    // metallicss (texture statique, pas une animation en soi) apparaît alors juste après coup,
+    // ce qui ne se remarque pas comme un à-coup contrairement à un blocage pendant le fondu.
     if (window.applyMetallicss) {
-      el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+      setTimeout(function () {
+        if (el.isConnected) el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+      }, 200);
     }
     if (c.rarity === "legendaire") applyLogoHolo(el, c);
     requestAnimationFrame(function () { fitCardMoves(el); });
