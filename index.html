@@ -247,9 +247,13 @@ body::after {
    perçoit comme un clignotement pendant le scroll. .mc-populating part d'opacity 0 et est
    retirée juste après l'injection (cf. JS), déclenchant la transition vers 1. Pas de transition
    sur la disparition (depopulateMiniCard vide instantanément, hors viewport donc invisible) :
-   seule l'apparition a besoin d'être adoucie. */
-.mini-card.mc-populating { opacity: 0; }
-.mini-card { transition: opacity 180ms ease-out; }
+   seule l'apparition a besoin d'être adoucie.
+   Le fondu porte uniquement sur les enfants directs (le contenu injecté par innerHTML), jamais
+   sur .mini-card elle-même : si on l'applique au conteneur, son propre fond/bordure (le
+   squelette ci-dessus, désormais visible) disparaît puis réapparaît avec le contenu — un
+   clignotement de la carte entière plutôt qu'un simple fondu du contenu qui se remplit. */
+.mini-card.mc-populating > * { opacity: 0; }
+.mini-card > * { transition: opacity 180ms ease-out; }
 .mini-card::before {
   content: ""; position: absolute; inset: -8px; z-index: -1; border-radius: 18px;
   opacity: 0.45;
