@@ -4197,6 +4197,19 @@ body::after {
         populateMiniCard(el, c);
       }
     });
+    // Peuple tout de suite, en synchrone, les slots déjà visibles à l'écran à cet instant — sans
+    // attendre le premier callback de gridObserver (IntersectionObserver ne rappelle qu'après le
+    // prochain cycle de rendu, jamais de façon synchrone à .observe()). Sans ça, un changement de
+    // filtre affiche d'abord une fenêtre de slots noirs vides avant que l'observer ne les peuple
+    // un peu plus tard — perçu comme deux étapes bien visibles ("cards noires" puis "cards qui
+    // s'affichent") plutôt qu'un remplacement direct et fluide du contenu de la grille.
+    var viewportBottom = window.innerHeight || document.documentElement.clientHeight;
+    Array.prototype.forEach.call(gridEl.children, function (el) {
+      var rect = el.getBoundingClientRect();
+      if (rect.bottom >= 0 && rect.top <= viewportBottom) {
+        populateMiniCard(el, el._card);
+      }
+    });
   }
 
   renderGrid();
