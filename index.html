@@ -4106,24 +4106,24 @@ body::after {
 
   var gridObserver = (typeof IntersectionObserver !== "undefined")
     ? new IntersectionObserver(function (entries) {
-        // Un changement de filtre reconstruit toute la grille (renderGrid vide gridEl et la
-        // re-remplit) : comme la marge de 800px couvre large, TOUTES les cartes désormais
-        // visibles entrent dans le même batch d'entries, et populateMiniCard (fade-in de 180ms
-        // chacune) se déclenchait donc simultanément pour chacune — un "flash" d'un coup plutôt
-        // qu'un effet de liste, perçu comme un saut. On étale légèrement l'apparition selon la
-        // position de la carte dans la grille (slotIndex, posée par renderGrid), plafonnée pour
-        // qu'un scroll normal (quelques cartes à la fois) reste quasi instantané comme avant.
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            var idx = Number(entry.target.dataset.slotIndex) || 0;
-            var delay = Math.min(idx * 12, 220);
-            if (delay === 0) {
-              populateMiniCard(entry.target, entry.target._card);
-            } else {
-              setTimeout(function () {
-                if (entry.target.isConnected) populateMiniCard(entry.target, entry.target._card);
-              }, delay);
-            }
+        // Étalement léger UNIQUEMENT quand beaucoup de cartes entrent dans le MÊME batch
+        // d'entries (cas d'un changement de filtre : renderGrid reconstruit tout, la marge de
+        // 800px fait que toutes les cartes désormais visibles arrivent d'un coup ici). Un
+        // scroll normal ne fait entrer qu'une poignée de cartes par batch et reste instantané
+        // (pas de délai) — sans cette distinction, étaler aussi selon la position absolue dans
+        // la grille entière retardait une carte isolée entrant pendant un scroll normal (jusqu'à
+        // 220ms), ce qui créait un vrai clignotement/pop-in visible au lieu de corriger quoi que
+        // ce soit.
+        var intersecting = entries.filter(function (e) { return e.isIntersecting; });
+        var isBigBatch = intersecting.length > 9;
+        intersecting.forEach(function (entry, i) {
+          var delay = isBigBatch ? Math.min(i * 12, 220) : 0;
+          if (delay === 0) {
+            populateMiniCard(entry.target, entry.target._card);
+          } else {
+            setTimeout(function () {
+              if (entry.target.isConnected) populateMiniCard(entry.target, entry.target._card);
+            }, delay);
           }
         });
       }, { root: null, rootMargin: "800px 0px", threshold: 0 })
@@ -4152,7 +4152,7 @@ body::after {
       if (activeFilter === "Tous") return true;
       return c.rarity === rarityKeyByLabel[activeFilter];
     });
-    list.forEach(function (c, index) {
+    list.forEach(function (c) {
       // slot vide au départ (pas d'image, pas de relief metallicss, pas d'observers) : seule sa
       // taille (aspect-ratio en CSS) compte pour que le scroll ait tout de suite la bonne
       // hauteur. Le vrai contenu n'est injecté que quand le slot approche du viewport, et retiré
@@ -4161,7 +4161,6 @@ body::after {
       var el = document.createElement("div");
       el.className = "mini-card mini-card-slot";
       el.dataset.rarity = c.rarity;
-      el.dataset.slotIndex = index; // cf. gridObserver : étalement de l'apparition au changement de filtre
       el._card = c;
       gridEl.appendChild(el);
       if (gridObserver) {
