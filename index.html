@@ -173,7 +173,13 @@ body::after {
 .view[hidden] { display: none; }
 
 /* ---------- Filters ---------- */
-.filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 18px; scrollbar-width: none; }
+/* padding-right : évite que le dernier chip (souvent "Commune") ne soit coupé net pile au bord
+   de l'écran — sans cette marge, rien ne distingue visuellement "dernier chip entièrement
+   visible" de "chip tronqué, suite masquée au swipe", ce qui se lit comme des filtres cassés
+   plutôt que comme une simple rangée scrollable (cf. retour "tronqués, je vois qu'ils sont là
+   mais masqués" sur la collection d'un ami, où le titre "Collection de <pseudo>" au-dessus
+   laisse souvent moins de largeur visible qu'ailleurs). */
+.filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; padding-right: 24px; margin-bottom: 18px; scrollbar-width: none; }
 .filters::-webkit-scrollbar { display: none; }
 /* Pilules de verre, même grammaire que topbar/tabbar à une échelle plus petite : blur,
    liseré lumineux, légère transparence — l'état actif reste l'accent plein (pas de verre
@@ -3689,6 +3695,11 @@ body::after {
         friendDetailFiltersEl.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("active"); });
         chip.classList.add("active");
         renderFriendDetailGrid(currentFriendDetail.friendId, currentFriendDetail.friendCode);
+        // même fix que les chips de l'album principal (cf. filtersEl) : amène le chip cliqué
+        // dans le viewport s'il était partiellement hors-écran — sans ça, "Rare"/"Commune" (les
+        // derniers chips, souvent hors du cadre initial ici vu la largeur prise par le titre
+        // "Collection de <pseudo>" juste au-dessus) restent coupés après le clic.
+        chip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
       });
       friendDetailFilterChips[f] = chip;
       friendDetailFiltersEl.appendChild(chip);
