@@ -3957,6 +3957,12 @@ body::after {
       filtersEl.querySelectorAll(".chip").forEach(function (c) { c.classList.remove("active"); });
       chip.classList.add("active");
       renderGrid();
+      // Sans ça, un chip cliqué partiellement hors champ (la rangée défile horizontalement,
+      // overflow-x: auto) change juste d'état visuel sur place sans être amené dans la vue —
+      // combiné à sa largeur qui varie avec son propre texte "owned/total", ça donnait
+      // l'impression que la rangée "sautait" au clic. inline:"nearest" scrolle seulement si le
+      // chip n'est pas déjà entièrement visible, pas de scroll surprise sur un clic sans effet.
+      chip.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
     });
     filterChips[f] = chip;
     filtersEl.appendChild(chip);
