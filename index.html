@@ -5437,11 +5437,38 @@ body::after {
     // filtre affiche d'abord une fenêtre de slots noirs vides avant que l'observer ne les peuple
     // un peu plus tard — perçu comme deux étapes bien visibles ("cards noires" puis "cards qui
     // s'affichent") plutôt qu'un remplacement direct et fluide du contenu de la grille.
+    // Même étalement léger que gridObserver (cf. commentaire plus haut) quand beaucoup de cartes
+    // possédées sont visibles d'un coup dans cette fenêtre initiale : sans ça, ce chemin synchrone
+    // peuplait TOUTES les cartes visibles (donc tous leurs canvas metallicss) en une seule frame
+    // bloquante, y compris au tout premier renderGrid() de la session ET à celui redéclenché par
+    // pullOwnedFromCloud() juste après la connexion — le vrai pic mémoire responsable du crash
+    // WebKit "page rechargée en raison d'un problème de contenu" sur un compte avec une collection
+    // déjà fournie (observé dès l'écran de connexion -> collection, pas seulement au chargement
+    // HTML initial).
+    // Garde essentielle : tant que #appRoot (ou un ancêtre) est [hidden] (display:none, cf. auth
+    // gate affiché avant connexion), CHAQUE carte a un rect {top:0, bottom:0, ...} qui passe le
+    // test de visibilité ci-dessous — cette boucle synchrone peuplait alors les 670 cartes d'un
+    // coup (tous leurs canvas metallicss compris) dès ce premier renderGrid() appelé pendant que
+    // l'auth gate occupe encore l'écran, bien avant que l'utilisateur ne voie la grille. C'est la
+    // vraie cause du crash WebKit observé pile à la bascule auth gate -> collection : on attend
+    // que la grille ait une hauteur réelle avant de peupler quoi que ce soit.
     var viewportBottom = window.innerHeight || document.documentElement.clientHeight;
-    Array.prototype.forEach.call(gridEl.children, function (el) {
-      var rect = el.getBoundingClientRect();
-      if (rect.bottom >= 0 && rect.top <= viewportBottom) {
+    var visibleEls = [];
+    if (gridEl.offsetParent !== null) {
+      Array.prototype.forEach.call(gridEl.children, function (el) {
+        var rect = el.getBoundingClientRect();
+        if (rect.bottom >= 0 && rect.top <= viewportBottom) visibleEls.push(el);
+      });
+    }
+    var isBigBatch = visibleEls.length > 9;
+    visibleEls.forEach(function (el, i) {
+      var delay = isBigBatch ? Math.min(i * 12, 220) : 0;
+      if (delay === 0) {
         populateMiniCard(el, el._card);
+      } else {
+        setTimeout(function () {
+          if (el.isConnected) populateMiniCard(el, el._card);
+        }, delay);
       }
     });
   }
