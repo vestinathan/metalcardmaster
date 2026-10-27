@@ -5919,6 +5919,19 @@ body::after {
     var el = buildRevealCard(card);
     stage.appendChild(el);
     revealEls.push(el);
+    // Chaque carte du paquet (jusqu'à 5) restait en DOM, position:absolute, superposée aux
+    // précédentes jusqu'à la fin du paquet (revealEls n'était vidé qu'au tout début d'une
+    // nouvelle ouverture, cf. proceedWithOpening) — chacune avec son propre filtre SVG
+    // metallicss actif en continu. Résultat : latence croissante de tap/swipe en tap/swipe à
+    // mesure qu'on avance dans le paquet, le navigateur recalculant tous les canvas empilés à
+    // chaque interaction. On ne garde ici que la carte qu'on vient d'ajouter et celle juste
+    // avant (nécessaire le temps de l'animation de transition entre les deux) ; les plus
+    // anciennes sont retirées du DOM tout de suite, jamais réutilisées de toute façon
+    // (revealCurrentCard reconstruit toujours un nouvel élément, y compris pour prevCard).
+    while (revealEls.length > 2) {
+      var old = revealEls.shift();
+      if (old && old.parentElement) old.remove();
+    }
     if (window.applyMetallicss) {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
