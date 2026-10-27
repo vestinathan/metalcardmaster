@@ -5363,7 +5363,7 @@ body::after {
     ? new IntersectionObserver(function (entries) {
         // Étalement léger UNIQUEMENT quand beaucoup de cartes entrent dans le MÊME batch
         // d'entries (cas d'un changement de filtre : renderGrid reconstruit tout, la marge de
-        // 800px fait que toutes les cartes désormais visibles arrivent d'un coup ici). Un
+        // 300px fait que toutes les cartes désormais visibles arrivent d'un coup ici). Un
         // scroll normal ne fait entrer qu'une poignée de cartes par batch et reste instantané
         // (pas de délai) — sans cette distinction, étaler aussi selon la position absolue dans
         // la grille entière retardait une carte isolée entrant pendant un scroll normal (jusqu'à
@@ -5381,13 +5381,16 @@ body::after {
             }, delay);
           }
         });
-      }, { root: null, rootMargin: "800px 0px", threshold: 0 })
+      }, { root: null, rootMargin: "300px 0px", threshold: 0 })
     : null;
-  // Deuxième observer, marge plus large (1200px) que celle de population (800px) : une carte
+  // Deuxième observer, marge plus large (500px) que celle de population (300px) : une carte
   // n'est dépeuplée qu'après être sortie assez largement de l'écran, jamais juste après y être
   // entrée, pour qu'un scroll lent aller-retour ne redéclenche pas sans arrêt tout le coût de
   // population (canvas metallicss, fitCardMoves...). Observer séparé plutôt qu'un seul avec deux
-  // seuils : IntersectionObserver ne permet qu'un root/rootMargin par instance.
+  // seuils : IntersectionObserver ne permet qu'un root/rootMargin par instance. Marges réduites
+  // (étaient 800px/1200px) pour limiter le nombre de canvas metallicss simultanément en mémoire
+  // dès le premier rendu de l'Album (onglet actif par défaut au lancement) — crash WebKit "page
+  // rechargée en raison d'un problème de contenu" observé sur iPhone dès l'ouverture de l'app.
   var gridUnloadObserver = (typeof IntersectionObserver !== "undefined")
     ? new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
@@ -5395,7 +5398,7 @@ body::after {
             depopulateMiniCard(entry.target);
           }
         });
-      }, { root: null, rootMargin: "1200px 0px", threshold: 0 })
+      }, { root: null, rootMargin: "500px 0px", threshold: 0 })
     : null;
 
   function renderGrid() {
