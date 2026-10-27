@@ -1050,6 +1050,72 @@ body::after {
   margin-top: 4px;
 }
 
+/* Bouton qui remplace le <select> natif pour choisir une carte à échanger : même habillage que
+   .account-input (champ de formulaire), mais un bouton plutôt qu'un vrai select — cf. commentaire
+   sur #tradeOfferedCard/#tradeRequestedCard dans le HTML. Affiche soit le placeholder, soit la
+   mini-vignette + nom de la carte actuellement choisie une fois qu'une sélection a été faite
+   (cf. setCardPickerTriggerValue côté JS). */
+.card-picker-trigger {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  text-align: left;
+  font-family: var(--font-body); font-size: 14px; color: var(--ink);
+  background: var(--input-bg, rgba(255,255,255,0.04));
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+.card-picker-trigger:focus { outline: none; border-color: var(--accent); }
+.cpt-placeholder { color: var(--ink-dim); }
+.cpt-thumb {
+  flex: none; width: 28px; height: 39px; border-radius: 3px; overflow: hidden;
+  background: var(--surface-2, #1a1510);
+  display: flex; align-items: center; justify-content: center;
+}
+.cpt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cpt-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cpt-qty { flex: none; font-size: 12px; color: var(--ink-dim); }
+
+/* Picker plein écran : recherche + grille de mini-cartes cliquables. Au-dessus de .trade-modal
+   (z-index supérieur) puisqu'il s'ouvre PAR-DESSUS le formulaire d'échange déjà ouvert. */
+.card-picker {
+  position: fixed; inset: 0; z-index: 120;
+  background: var(--bg, #0c0a08);
+  display: flex; flex-direction: column;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.card-picker[hidden] { display: none; }
+.card-picker-panel {
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  max-width: 480px; margin: 0 auto; width: 100%;
+}
+.card-picker-header { display: flex; align-items: center; gap: 10px; flex: none; }
+.card-picker-search { flex: 1; }
+.card-picker-close {
+  flex: none; width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--line); color: var(--ink);
+  font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-picker-empty { color: var(--ink-dim); font-size: 13px; text-align: center; margin-top: 24px; }
+.card-picker-grid {
+  flex: 1; min-height: 0; overflow-y: auto;
+  /* minmax(0, 1fr) et non 1fr seul, + grid-auto-rows: min-content : sans ça, chaque .mini-card
+     (populée par populateOwnedMiniCard) hérite de la taille intrinsèque de .mc-scale (300x420px),
+     même si .mc-scale est absolument positionné — le calcul min-content de Grid regarde quand même
+     cette largeur/hauteur "naturelle" sous-jacente pour dimensionner colonnes et lignes implicites.
+     Sans minmax(0, …) les 3 colonnes s'élargissaient à ~267px chacune (au lieu de se partager la
+     largeur réelle du picker) et les cartes débordaient hors de leur colonne ; sans
+     grid-auto-rows: min-content les lignes s'étiraient de la même façon, laissant un grand vide
+     sous chaque rangée de cartes. */
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: min-content;
+  gap: 12px 8px;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+.card-picker-grid .mini-card-slot { cursor: pointer; }
+
 /* ==========================================================================
    OPENING SEQUENCE — overlay plein écran
    ========================================================================== */
@@ -2041,13 +2107,21 @@ body::after {
       <h2 class="account-title trade-modal-title">Proposer un échange</h2>
       <form class="account-form" id="formProposeTrade">
         <label class="friends-field-label">Carte offerte</label>
-        <select class="account-input" id="tradeOfferedCard"></select>
+        <!-- Remplace l'ancien <select> natif (liste texte de 670 cartes, illisible) par un
+             bouton qui ouvre #cardPicker — une vraie grille de mini-cartes avec recherche,
+             cf. openCardPicker()/renderCardPickerGrid() plus bas. La valeur choisie reste
+             stockée dans ce même id (data-card-id) pour ne rien changer au formulaire/submit
+             (propose_trade lit toujours #tradeOfferedCard, juste via .dataset.cardId au lieu
+             de .value). -->
+        <button type="button" class="card-picker-trigger" id="tradeOfferedCard" data-card-id="">
+          <span class="cpt-placeholder">Choisir une carte…</span>
+        </button>
         <label class="friends-field-label">Quantité offerte</label>
         <input class="account-input" id="tradeOfferedQty" type="number" min="1" value="1">
         <label class="friends-field-label">Carte demandée (optionnel)</label>
-        <select class="account-input" id="tradeRequestedCard">
-          <option value="">Aucune contrepartie (don)</option>
-        </select>
+        <button type="button" class="card-picker-trigger" id="tradeRequestedCard" data-card-id="">
+          <span class="cpt-placeholder">Aucune contrepartie (don)</span>
+        </button>
         <label class="friends-field-label">Quantité demandée</label>
         <input class="account-input" id="tradeRequestedQty" type="number" min="1" value="1">
         <p class="account-msg" id="tradeModalMsg" hidden></p>
@@ -2056,6 +2130,22 @@ body::after {
           <button class="account-btn account-btn-primary" type="submit">Envoyer</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Picker plein écran : recherche + grille de mini-cartes cliquables, réutilisé pour "Carte
+       offerte" (uniquement les cartes possédées par MOI, cf. ownedIdsList) et "Carte demandée"
+       (uniquement les cartes possédées par l'AMI dont on vient de la page détail, cf.
+       friendDetailOwnedIds) — jamais les 670 cartes du jeu complet, pour rester cohérent avec ce
+       qu'une proposition d'échange peut réellement porter. -->
+  <div class="card-picker" id="cardPicker" hidden>
+    <div class="card-picker-panel">
+      <div class="card-picker-header">
+        <input class="account-input card-picker-search" id="cardPickerSearch" type="search" placeholder="Rechercher une carte…" autocomplete="off">
+        <button type="button" class="card-picker-close" id="cardPickerClose" aria-label="Fermer">✕</button>
+      </div>
+      <p class="card-picker-empty" id="cardPickerEmpty" hidden>Aucune carte ne correspond.</p>
+      <div class="card-picker-grid" id="cardPickerGrid"></div>
     </div>
   </div>
 
@@ -4724,6 +4814,119 @@ body::after {
   var tradeModalMsgEl = document.getElementById("tradeModalMsg");
   var cancelTradeModalBtn = document.getElementById("cancelTradeModal");
 
+  // ---- Picker de carte (remplace les anciens <select> pour "Carte offerte"/"Carte demandée") ----
+  var cardPickerEl = document.getElementById("cardPicker");
+  var cardPickerSearchEl = document.getElementById("cardPickerSearch");
+  var cardPickerGridEl = document.getElementById("cardPickerGrid");
+  var cardPickerEmptyEl = document.getElementById("cardPickerEmpty");
+  var cardPickerCloseBtn = document.getElementById("cardPickerClose");
+  var cardPickerTargetEl = null; // le bouton déclencheur (#tradeOfferedCard ou #tradeRequestedCard) en cours d'édition
+  var cardPickerIds = [];        // ids proposables pour cette ouverture (ownedIdsList() ou friendDetailOwnedIds)
+  var cardPickerAllowEmpty = false; // "Carte demandée" seule a une option "aucune contrepartie"
+
+  // Pose la valeur choisie sur le bouton déclencheur : mini-vignette (photo réelle si possédée,
+  // sinon le même fallback généré que sur les fiches) + nom + quantité possédée si pertinent.
+  function setCardPickerTriggerValue(triggerEl, cardId) {
+    triggerEl.dataset.cardId = cardId || "";
+    if (!cardId) {
+      var isOffered = triggerEl === tradeOfferedCardEl;
+      triggerEl.innerHTML = '<span class="cpt-placeholder">' +
+        (isOffered ? "Choisir une carte…" : "Aucune contrepartie (don)") + '</span>';
+      return;
+    }
+    var c = cardsById[cardId];
+    if (!c) { triggerEl.innerHTML = '<span class="cpt-placeholder">Choisir une carte…</span>'; return; }
+    var thumbSrc = c.photo || c.logo || "";
+    var qtyHtml = triggerEl === tradeOfferedCardEl ? '<span class="cpt-qty">x' + ownedCount(c.id) + '</span>' : "";
+    triggerEl.innerHTML =
+      '<span class="cpt-thumb">' + (thumbSrc ? '<img src="' + thumbSrc + '" alt="">' : "") + '</span>' +
+      '<span class="cpt-name">' + c.name + '</span>' + qtyHtml;
+  }
+
+  // Ouvre le picker plein écran pour un bouton déclencheur donné. ids = la liste d'ids
+  // proposables (déjà filtrée en amont par l'appelant — ownedIdsList() pour "offerte",
+  // friendDetailOwnedIds pour "demandée" : jamais les 670 cartes du jeu, seulement celles
+  // réellement pertinentes pour cet échange précis).
+  function openCardPicker(triggerEl, ids, allowEmpty) {
+    cardPickerTargetEl = triggerEl;
+    cardPickerIds = ids;
+    cardPickerAllowEmpty = !!allowEmpty;
+    cardPickerSearchEl.value = "";
+    // IMPORTANT : hidden=false AVANT renderCardPickerGrid(), pas après — populateOwnedMiniCard()
+    // lit el.clientWidth pour mettre à l'échelle la fiche carte (cf. son commentaire), et un
+    // élément encore display:none à cet instant a clientWidth=0, donc scale(0) : des cartes
+    // injectées mais invisibles. Même piège que celui déjà corrigé sur renderGrid()/l'auth gate.
+    cardPickerEl.hidden = false;
+    renderCardPickerGrid("");
+    // focus différé : évite que le clavier mobile ne s'ouvre avant la transition d'affichage,
+    // perçu comme un sursaut de mise en page sur certains navigateurs.
+    setTimeout(function () { cardPickerSearchEl.focus(); }, 50);
+  }
+
+  function closeCardPicker() {
+    cardPickerEl.hidden = true;
+    cardPickerTargetEl = null;
+  }
+
+  // Normalise pour une recherche insensible aux accents/casse (ex: "metallica", "Mötley" ->
+  // trouvable en tapant "motley") — cohérent avec le fait que beaucoup de noms de groupes/
+  // musiciens de cette base portent des diacritiques stylisés (ö, ü, å...).
+  function normalizeSearch(s) {
+    return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function renderCardPickerGrid(query) {
+    cardPickerGridEl.innerHTML = "";
+    var q = normalizeSearch(query);
+    var list = cardPickerIds
+      .map(function (id) { return cardsById[id]; })
+      .filter(function (c) { return c && (!q || normalizeSearch(c.name).indexOf(q) !== -1); });
+    cardPickerEmptyEl.hidden = list.length > 0;
+    list.forEach(function (c) {
+      var cell = document.createElement("div");
+      cell.className = "mini-card mini-card-slot";
+      cell.dataset.rarity = c.rarity;
+      cell._card = c;
+      cell.addEventListener("click", function () {
+        if (cardPickerTargetEl) setCardPickerTriggerValue(cardPickerTargetEl, c.id);
+        closeCardPicker();
+      });
+      cardPickerGridEl.appendChild(cell);
+      populateOwnedMiniCard(cell, c);
+      // populateOwnedMiniCard() pose "mc-populating" (opacity:0 sur son contenu, cf. CSS) mais ne
+      // la retire jamais elle-même — ce retrait n'existe que dans populateMiniCard(), le wrapper
+      // utilisé par la grille principale (double rAF : laisser peindre l'état initial avant de
+      // déclencher la transition). Ici on appelle populateOwnedMiniCard() directement (pas ce
+      // wrapper), donc sans ce même retrait la carte restait invisible en permanence après une
+      // recherche — bug trouvé en vérifiant visuellement le picker après filtrage.
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () { cell.classList.remove("mc-populating"); });
+      });
+    });
+  }
+
+  if (cardPickerSearchEl) {
+    cardPickerSearchEl.addEventListener("input", function () {
+      renderCardPickerGrid(cardPickerSearchEl.value);
+    });
+  }
+  if (cardPickerCloseBtn) cardPickerCloseBtn.addEventListener("click", closeCardPicker);
+  if (cardPickerEl) {
+    cardPickerEl.addEventListener("click", function (e) {
+      if (e.target === cardPickerEl) closeCardPicker();
+    });
+  }
+  if (tradeOfferedCardEl) {
+    tradeOfferedCardEl.addEventListener("click", function () {
+      openCardPicker(tradeOfferedCardEl, ownedIdsList(), false);
+    });
+  }
+  if (tradeRequestedCardEl) {
+    tradeRequestedCardEl.addEventListener("click", function () {
+      openCardPicker(tradeRequestedCardEl, friendDetailOwnedIds || [], true);
+    });
+  }
+
   var cardsById = {};
   CARDS.forEach(function (c) { cardsById[c.id] = c; });
 
@@ -5025,24 +5228,14 @@ body::after {
 
   // ---- Formulaire de proposition d'échange ----
   function openTradeModal(friendId, friendCode, preselectedCardId) {
-    tradeOfferedCardEl.innerHTML = "";
-    ownedIdsList().forEach(function (id) {
-      var c = cardsById[id];
-      if (!c) return;
-      var opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = c.name + " (x" + ownedCount(id) + ")";
-      tradeOfferedCardEl.appendChild(opt);
-    });
-    if (preselectedCardId) tradeOfferedCardEl.value = preselectedCardId;
-
-    tradeRequestedCardEl.innerHTML = '<option value="">Aucune contrepartie (don)</option>';
-    CARDS.forEach(function (c) {
-      var opt = document.createElement("option");
-      opt.value = c.id;
-      opt.textContent = c.name;
-      tradeRequestedCardEl.appendChild(opt);
-    });
+    // Picker au lieu des anciens <select> peuplés en masse ici (cf. commentaire sur
+    // #tradeOfferedCard dans le HTML) : on pose juste la valeur pré-sélectionnée (quand on
+    // arrive depuis le bouton "Offrir / Échanger" d'une carte précise) ou on réinitialise au
+    // placeholder, le remplissage réel de la grille se fait à l'ouverture du picker
+    // (openCardPicker), avec les ids déjà filtrés à ce moment-là (ownedIdsList() /
+    // friendDetailOwnedIds), jamais ici.
+    setCardPickerTriggerValue(tradeOfferedCardEl, preselectedCardId || "");
+    setCardPickerTriggerValue(tradeRequestedCardEl, "");
 
     tradeOfferedQtyEl.value = 1;
     tradeRequestedQtyEl.value = 1;
@@ -5060,9 +5253,9 @@ body::after {
       ev.preventDefault();
       if (!supa) return;
       var friendId = tradeModalEl.dataset.friendId;
-      var offeredCardId = tradeOfferedCardEl.value;
+      var offeredCardId = tradeOfferedCardEl.dataset.cardId || "";
       var offeredQty = parseInt(tradeOfferedQtyEl.value, 10) || 1;
-      var requestedCardId = tradeRequestedCardEl.value || null;
+      var requestedCardId = tradeRequestedCardEl.dataset.cardId || null;
       var requestedQty = requestedCardId ? (parseInt(tradeRequestedQtyEl.value, 10) || 1) : null;
       if (!offeredCardId) return;
       showFriendMsg(tradeModalMsgEl, "Envoi…", null);
