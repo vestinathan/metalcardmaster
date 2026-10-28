@@ -1708,9 +1708,15 @@ body::after {
 
 /* photo réelle — contraste net, désaturée, pas de vignette colorée : juste un dégradé noir pour lire le texte */
 .rc-photo { position: relative; z-index: 0; flex: none; height: 44%; overflow: hidden; background: var(--bg-raised, #0f0d0b); }
+/* --photo-y : point vertical de recadrage, 22% par défaut (visage généralement en haut de la
+   photo). Quelques photos (cf. CARDS, champ photoY) ont un cadrage différent — concert pris de
+   loin, visage penché vers un micro, gros plan sur les mains — qui coupait le visage avec ce
+   défaut dans la fenêtre étroite (44% de hauteur de carte) utilisée ici ; ces cartes passent leur
+   propre valeur en style inline sur .rc-photo-img (cf. buildCardFrameHtml), qui écrase ce défaut
+   via la custom property plutôt que de dupliquer toute la règle object-position par carte. */
 .rc-photo img {
   position: absolute; inset: 0;
-  width: 100%; height: 100%; object-fit: cover; object-position: center 22%;
+  width: 100%; height: 100%; object-fit: cover; object-position: center var(--photo-y, 22%);
   filter: contrast(1.2) saturate(0.35) brightness(0.92);
 }
 .rc-photo .rc-photo-tint {
@@ -3270,7 +3276,7 @@ body::after {
   { id: "musician-ribeiro", type: "musician", band: "moonspell", name: "Fernando Ribeiro", genre: "Chant", country: "PT", rarity: "rare", influence: 47, views: 34, logo: "images/bands/moonspell-logo.png",
     founded: 1992, hit: { title: "Wolfheart", year: 1995 },
     bio: "Chanteur et membre fondateur de Moonspell en 1992, principal parolier et figure centrale du gothic/black metal portugais." },
-  { id: "musician-warrior", type: "musician", band: "celticfrost", name: "Tom Warrior", genre: "Chant / Guitare", country: "CH", rarity: "rare", influence: 46, views: 33, photo: "images/bands/musician-warrior-photo.jpg", logo: "images/bands/celticfrost-logo.png",
+  { id: "musician-warrior", type: "musician", band: "celticfrost", name: "Tom Warrior", genre: "Chant / Guitare", country: "CH", rarity: "rare", influence: 46, views: 33, photo: "images/bands/musician-warrior-photo.jpg", photoY: "0%", logo: "images/bands/celticfrost-logo.png",
     founded: 1984, hit: { title: "Morbid Tales", year: 1984 },
     bio: "De son vrai nom Thomas Gabriel Fischer, chanteur, guitariste et membre fondateur de Celtic Frost en 1984, considéré comme un pionnier de l'extreme metal." },
   { id: "musician-kursch", type: "musician", band: "blindguardian", name: "Hansi Kürsch", genre: "Chant / Basse", country: "DE", rarity: "rare", influence: 46, views: 33, photo: "images/bands/musician-kursch-photo.jpg", logo: "images/bands/blindguardian-logo.png",
@@ -3279,7 +3285,7 @@ body::after {
   { id: "musician-mccall", type: "musician", band: "parkwaydrive", name: "Winston McCall", genre: "Chant", country: "AU", rarity: "rare", influence: 45, views: 31, logo: "images/bands/parkwaydrive-logo.png",
     founded: 2003, hit: { title: "Vice Grip", year: 2015 },
     bio: "Chanteur et membre fondateur de Parkway Drive en 2003, figure centrale du metalcore australien." },
-  { id: "musician-psteele", type: "musician", band: "typeonegative", name: "Peter Steele", genre: "Chant / Basse", country: "US", rarity: "rare", influence: 45, views: 30, photo: "images/bands/musician-psteele-photo.jpg", logo: "images/bands/typeonegative-logo.png",
+  { id: "musician-psteele", type: "musician", band: "typeonegative", name: "Peter Steele", genre: "Chant / Basse", country: "US", rarity: "rare", influence: 45, views: 30, photo: "images/bands/musician-psteele-photo.jpg", photoY: "0%", logo: "images/bands/typeonegative-logo.png",
     founded: 1989, hit: { title: "Black No. 1", year: 1993 },
     bio: "Chanteur, bassiste et membre fondateur de Type O Negative en 1989, connu pour sa voix de baryton grave caractéristique, décédé en 2010." },
   { id: "musician-stanne", type: "musician", band: "darktranquillity", name: "Mikael Stanne", genre: "Chant", country: "SE", rarity: "rare", influence: 44, views: 29, photo: "images/bands/musician-stanne-photo.jpg", logo: "images/bands/darktranquillity-logo.png",
@@ -4207,7 +4213,7 @@ body::after {
   { id: "musician-kheybourne", type: "musician", band: "angelwitch", name: "Kevin Heybourne", genre: "Chant / Guitare", country: "GB", rarity: "commune", influence: 32, views: 10,
     founded: 1976, hit: { title: "Angel Witch", year: 1980 },
     bio: "Fondateur, chanteur et guitariste d'Angel Witch depuis 1976, seul membre constant du groupe à travers toutes ses incarnations." },
-  { id: "musician-warrior-hellhammer", type: "musician", band: "hellhammer", name: "Tom Warrior", genre: "Chant / Guitare", country: "CH", rarity: "commune", influence: 34, views: 12, photo: "images/bands/musician-warrior-hellhammer-photo.jpg", logo: "images/bands/hellhammer-logo.png",
+  { id: "musician-warrior-hellhammer", type: "musician", band: "hellhammer", name: "Tom Warrior", genre: "Chant / Guitare", country: "CH", rarity: "commune", influence: 34, views: 12, photo: "images/bands/musician-warrior-hellhammer-photo.jpg", photoY: "0%", logo: "images/bands/hellhammer-logo.png",
     founded: 1982, hit: { title: "Apocalyptic Raids", year: 1984 },
     bio: "Fondateur, chanteur et guitariste de Hellhammer en 1982, pionnier du proto-black/death metal avant de dissoudre le groupe et fonder Celtic Frost." },
   { id: "musician-molivo", type: "musician", band: "repulsion", name: "Matt Olivo", genre: "Guitare / Chant", country: "US", rarity: "commune", influence: 30, views: 8,
@@ -6369,8 +6375,15 @@ body::after {
     // de laisser l'icone "image cassee" du navigateur. Pas de onerror inline en attribut HTML ici
     // (fragile a echapper avec des guillemets/apostrophes dans les donnees) : on utilise un
     // addEventListener classique une fois l'element attache au DOM.
+    // card.photoY (optionnel, cf. CARDS) : point vertical de recadrage pour les quelques photos
+    // dont le cadrage par défaut (22% du haut, cf. .rc-photo img en CSS) coupait le visage dans la
+    // fenêtre étroite d'affichage — concert pris de loin, chanteur penché vers un micro, gros plan
+    // sur les mains plutôt que le visage, etc. Posé en style inline via la custom property
+    // --photo-y plutôt que par une classe par carte, pour rester une valeur de donnée (CARDS) et
+    // non une variante de style.
+    var photoStyleAttr = card.photoY ? ' style="--photo-y: ' + card.photoY + '"' : "";
     var photoHtml = card.photo
-      ? '<img class="rc-photo-img" src="' + card.photo + '" alt="" decoding="async"><div class="rc-photo-tint"></div>'
+      ? '<img class="rc-photo-img"' + photoStyleAttr + ' src="' + card.photo + '" alt="" decoding="async"><div class="rc-photo-tint"></div>'
       : fallbackPhotoHtml;
     // le logo du groupe (reel ou genere) s'affiche dans le header, a la place du nom en texte,
     // avec la pastille de rarete a sa gauche. meme garde-fou : si card.logo (reel) echoue au
