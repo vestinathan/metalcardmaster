@@ -304,33 +304,27 @@ body::after {
 /* Badge de quantité affiché sur les cartes possédées en plusieurs exemplaires — chaque tirage en
    paquet compte, même pour une carte déjà possédée (voir addOwned/nextCard), donc ce badge est le
    seul indice visuel de doublon dans la grille Album. Repris du style "étiquette" des jeux de
-   cartes à collectionner mobiles (bandeau plein calé dans le coin bas-gauche, coin supérieur droit
-   coupé en diagonale) plutôt que l'ancien pastille ronde orange en haut-à-droite (qui entrait en
-   compétition visuelle avec le badge de rareté, déjà en haut-à-gauche). Ajustements après retours
-   utilisateur successifs : fond --accent (orange du design system, bien plus visible qu'un
-   bleu-gris sombre) ; left:0/bottom:0 — PAS de décalage négatif — pour épouser exactement le bord
-   bas-gauche de la carte sans déborder dessus (un -3px pour "compenser" le padding de .mini-card
-   débordait visuellement du coin arrondi de la carte en dessous, cf. retour "ça déborde à
-   gauche"). Coin bas-gauche arrondi directement dans le clip-path (4 points qui approximent la
-   courbe, rayon ~12px pour coïncider avec celui de .mini-card, cf. règle .mini-card plus haut) —
-   PAS via border-bottom-left-radius seul : un clip-path (nécessaire pour la diagonale du coin
-   haut-droit, silhouette "étiquette") écrase entièrement le rendu d'un border-radius sur les
-   zones qu'il couvre, donc les deux ne peuvent pas cohabiter sur le même coin ; d'où la nécessité
-   d'approximer l'arrondi par des points plutôt que par la propriété border-radius. Large
-   (min-width 46%) et plat (padding vertical réduit) pour la lisibilité. Par-dessus le cadre mis à
-   l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none et une
+   cartes à collectionner mobiles : un ruban plein qui RECOUVRE le coin bas-gauche de la carte
+   (angle net, pas épousé/arrondi) plutôt que l'ancien pastille ronde orange en haut-à-droite (qui
+   entrait en compétition visuelle avec le badge de rareté, déjà en haut-à-gauche). Après plusieurs
+   retours utilisateur : fond --accent (orange du design system) ; left/bottom à -3px pour
+   compenser le padding de 3px de .mini-card (cf. règle .mini-card plus haut) ET déborder
+   légèrement par-dessus le coin arrondi de la carte — c'est l'effet recherché ("recouvre la
+   carte"), à ne pas confondre avec un bug de débordement comme la version précédente qui laissait
+   un angle droit dépasser de façon disgracieuse à cause du clip-path appliqué aussi sur CE coin ;
+   ici le coin bas-gauche du badge reste un angle droit simple (aucun border-radius/clip-path
+   dessus), le clip-path ne coupant que le coin haut-droit (diagonale, silhouette "étiquette").
+   Large (min-width 46%) et plat (hauteur fixe réduite) pour la lisibilité. Par-dessus le cadre mis
+   à l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none et une
    transform — on le place donc comme enfant direct de .mini-card, pas de .mc-scale). */
 .mini-card .mc-qty-badge {
   position: absolute;
-  left: 0; bottom: 0;
+  left: -3px; bottom: -3px;
   z-index: 3;
   min-width: 46%;
   height: 22px;
   padding: 0 14px 0 9px;
-  clip-path: polygon(
-    0 calc(100% - 12px), 2px calc(100% - 7px), 7px calc(100% - 2px), 12px 100%,
-    100% 100%, calc(100% - 9px) 0, 0 0
-  );
+  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
   display: flex; align-items: center; justify-content: center;
   background: var(--accent);
   color: #140c08;
