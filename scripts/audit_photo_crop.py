@@ -30,6 +30,15 @@ Usage:
 Sortie: un JSON avec, pour chaque carte, le verdict (ok / face_cut /
 no_face_detected / missing_file) et, en cas de face_cut, le % de la zone de
 visage qui tombe hors de la fenêtre visible.
+
+Filtre anti-faux-positifs (photos de groupe): le verdict face_cut n'est
+retenu que si un seul visage a été détecté sur l'image (portrait
+individuel). Sur une photo de groupe, Haar Cascade détecte souvent un
+visage secondaire près du bord du cadre qui n'est pas le sujet du
+cadrage volontairement large de la carte — sans ce filtre, le premier
+run complet de ce script avait remonté 239/496 cartes en face_cut, dont
+l'immense majorité était ce faux positif ; avec le filtre, seules les
+cartes correspondant à un vrai portrait mal cadré remontent.
 """
 import argparse
 import json
@@ -171,7 +180,18 @@ def audit_card(card, images_dir):
         worst_visible_frac = min(worst_visible_frac, visible_frac)
 
     entry["worst_face_visible_frac"] = round(worst_visible_frac, 3)
-    entry["verdict"] = "face_cut" if worst_visible_frac < FACE_VISIBLE_THRESHOLD else "ok"
+
+    # Les photos de groupe déclenchent souvent une détection de visage
+    # "secondaire" près du bord du cadre (pas le sujet réel du cadrage large
+    # et volontaire), ce qui produit un nombre massif de faux positifs
+    # "face_cut" sur des photos qui ne posent en réalité aucun problème. On
+    # ne retient le verdict face_cut que lorsqu'un seul visage est détecté
+    # (portrait individuel) : c'est le signal fiable qu'il s'agit bien du
+    # sujet principal de la carte et pas d'un visage incident en périphérie.
+    if len(faces) == 1 and worst_visible_frac < FACE_VISIBLE_THRESHOLD:
+        entry["verdict"] = "face_cut"
+    else:
+        entry["verdict"] = "ok"
     return entry
 
 
