@@ -5228,9 +5228,14 @@ body::after {
         var btn = document.createElement("button");
         btn.className = "fmc-tradebtn";
         btn.type = "button";
-        btn.textContent = "Offrir / Échanger";
+        btn.textContent = "Échanger";
         btn.addEventListener("click", function (ev) {
           ev.stopPropagation();
+          // c est une carte de LA COLLECTION DE L'AMI (cf. friendDetailOwnedIds plus haut) : c'est
+          // donc la carte qu'on DEMANDE, jamais celle qu'on offre (qui vient forcément de ma
+          // propre collection, choisie séparément dans le picker "Carte offerte"). Avant ce fix,
+          // ce même id était passé comme carte OFFERTE par erreur — le récapitulatif de l'échange
+          // affichait alors la carte de l'ami comme si c'était moi qui la cédais.
           openTradeModal(friendId, friendCode, c.id);
         });
         cell.appendChild(btn);
@@ -5253,15 +5258,19 @@ body::after {
   }
 
   // ---- Formulaire de proposition d'échange ----
+  // preselectedCardId (quand fourni) vient toujours du bouton "Échanger" sous une carte de LA
+  // COLLECTION DE L'AMI (cf. renderFriendDetailGrid) — donc une carte qu'on DEMANDE, jamais une
+  // carte qu'on offre (qu'on choisit forcément séparément, dans sa propre collection). D'où le
+  // pré-remplissage sur tradeRequestedCardEl, pas tradeOfferedCardEl.
   function openTradeModal(friendId, friendCode, preselectedCardId) {
     // Picker au lieu des anciens <select> peuplés en masse ici (cf. commentaire sur
     // #tradeOfferedCard dans le HTML) : on pose juste la valeur pré-sélectionnée (quand on
-    // arrive depuis le bouton "Offrir / Échanger" d'une carte précise) ou on réinitialise au
+    // arrive depuis le bouton "Échanger" d'une carte précise de l'ami) ou on réinitialise au
     // placeholder, le remplissage réel de la grille se fait à l'ouverture du picker
     // (openCardPicker), avec les ids déjà filtrés à ce moment-là (ownedIdsList() /
     // friendDetailOwnedIds), jamais ici.
-    setCardPickerTriggerValue(tradeOfferedCardEl, preselectedCardId || "");
-    setCardPickerTriggerValue(tradeRequestedCardEl, "");
+    setCardPickerTriggerValue(tradeOfferedCardEl, "");
+    setCardPickerTriggerValue(tradeRequestedCardEl, preselectedCardId || "");
     showFriendMsg(tradeModalMsgEl, "", null);
     tradeModalEl.dataset.friendId = friendId;
     tradeModalEl.dataset.friendCode = friendCode;
