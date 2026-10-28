@@ -306,34 +306,38 @@ body::after {
    seul indice visuel de doublon dans la grille Album. Repris du style "étiquette" des jeux de
    cartes à collectionner mobiles (bandeau plein calé dans le coin bas-gauche, coin supérieur droit
    coupé en diagonale) plutôt que l'ancien pastille ronde orange en haut-à-droite (qui entrait en
-   compétition visuelle avec le badge de rareté, déjà en haut-à-gauche). Deux ajustements après
-   retour utilisateur sur la première version bandeau : fond --accent (orange du design system,
-   bien plus visible qu'un bleu-gris sombre qui se fondait dans le fond de l'app) et position
-   -3px/-3px (pas 0/0) pour compenser le padding de 3px de .mini-card (cf. règle .mini-card plus
-   haut) — un enfant position:absolute avec bottom:0/left:0 se cale sur le bord INTÉRIEUR de ce
-   padding, pas le bord réel/arrondi de la carte, d'où le bandeau visuellement "flottant" avant ce
-   fix plutôt que vraiment collé au bord. Plus large/moins haut que la première version (padding
-   vertical réduit, largeur minimale montée à 40%) pour la même raison de lisibilité. Par-dessus le
-   cadre mis à l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none
-   et une transform — on le place donc comme enfant direct de .mini-card, pas de .mc-scale). */
+   compétition visuelle avec le badge de rareté, déjà en haut-à-gauche). Ajustements après retours
+   utilisateur successifs : fond --accent (orange du design system, bien plus visible qu'un
+   bleu-gris sombre) ; left:0/bottom:0 — PAS de décalage négatif — pour épouser exactement le bord
+   bas-gauche de la carte sans déborder dessus (un -3px pour "compenser" le padding de .mini-card
+   débordait visuellement du coin arrondi de la carte en dessous, cf. retour "ça déborde à
+   gauche"). Coin bas-gauche arrondi directement dans le clip-path (4 points qui approximent la
+   courbe, rayon ~12px pour coïncider avec celui de .mini-card, cf. règle .mini-card plus haut) —
+   PAS via border-bottom-left-radius seul : un clip-path (nécessaire pour la diagonale du coin
+   haut-droit, silhouette "étiquette") écrase entièrement le rendu d'un border-radius sur les
+   zones qu'il couvre, donc les deux ne peuvent pas cohabiter sur le même coin ; d'où la nécessité
+   d'approximer l'arrondi par des points plutôt que par la propriété border-radius. Large
+   (min-width 46%) et plat (padding vertical réduit) pour la lisibilité. Par-dessus le cadre mis à
+   l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none et une
+   transform — on le place donc comme enfant direct de .mini-card, pas de .mc-scale). */
 .mini-card .mc-qty-badge {
   position: absolute;
-  left: -3px; bottom: -3px;
+  left: 0; bottom: 0;
   z-index: 3;
-  min-width: 40%;
-  padding: 2px 14px 2px 9px;
-  /* coin bas-gauche carré (dans l'angle de la carte), coin haut-droit coupé en diagonale —
-     même silhouette "étiquette" que la référence, via un clip-path plutôt qu'un simple
-     border-radius qui donnerait un rectangle/pilule générique. */
-  clip-path: polygon(0 0, 100% 0, calc(100% - 9px) 100%, 0 100%);
-  border-bottom-left-radius: 11px;
+  min-width: 46%;
+  height: 22px;
+  padding: 0 14px 0 9px;
+  clip-path: polygon(
+    0 calc(100% - 12px), 2px calc(100% - 7px), 7px calc(100% - 2px), 12px 100%,
+    100% 100%, calc(100% - 9px) 0, 0 0
+  );
   display: flex; align-items: center; justify-content: center;
   background: var(--accent);
   color: #140c08;
   font-family: var(--font-metal);
   font-weight: 400;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1;
   letter-spacing: 0.02em;
   text-align: center;
   box-shadow: 0 -1px 4px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.3);
