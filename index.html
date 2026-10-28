@@ -301,30 +301,34 @@ body::after {
    géométries de coin (rayons légèrement différents selon la taille réelle du slot/arrondi). */
 .mini-card:has(.mc-scale) .mc-band,
 .mini-card:has(.mc-scale) .mc-inner-ring { display: none; }
-/* Badge de quantité ("x2", "x3"...) affiché sur les cartes possédées en plusieurs exemplaires —
-   chaque tirage en paquet compte, même pour une carte déjà possédée (voir addOwned/nextCard), donc
-   ce badge est le seul indice visuel de doublon dans la grille Album. Coin haut-droit, par-dessus
-   le cadre mis à l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a pointer-events:none
-   et une transform — on le place donc comme enfant direct de .mini-card, pas de .mc-scale). */
+/* Badge de quantité affiché sur les cartes possédées en plusieurs exemplaires — chaque tirage en
+   paquet compte, même pour une carte déjà possédée (voir addOwned/nextCard), donc ce badge est le
+   seul indice visuel de doublon dans la grille Album. Repris du style "étiquette" des jeux de
+   cartes à collectionner mobiles (coin bas-gauche, pastille sombre discrète, chiffre seul sans
+   "x") plutôt que l'ancien pastille ronde orange en haut-à-droite, qui entrait en compétition
+   visuelle avec le badge de rareté (déjà en haut-à-gauche) et clignotait trop fort sur la grille.
+   Par-dessus le cadre mis à l'échelle (z-index supérieur, hors du conteneur .mc-scale qui a
+   pointer-events:none et une transform — on le place donc comme enfant direct de .mini-card, pas
+   de .mc-scale). */
 .mini-card .mc-qty-badge {
   position: absolute;
-  top: 5px; right: 5px;
+  bottom: 5px; left: 5px;
   z-index: 3;
-  min-width: 22px;
-  height: 22px;
+  min-width: 18px;
+  height: 18px;
   padding: 0 5px;
-  border-radius: 999px;
+  border-radius: 5px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--accent);
-  border: 1.5px solid #0c0b0a;
-  color: #140c08;
+  background: rgba(10, 9, 8, 0.82);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff;
   font-family: var(--font-body);
   font-weight: 700;
   font-size: 11px;
   line-height: 1;
   letter-spacing: 0.01em;
   text-align: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.3);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.6);
   pointer-events: none;
 }
 /* même composition que la reveal-card (.rc-head / .rc-photo / .rc-move-top), à échelle réduite :
@@ -5469,7 +5473,10 @@ body::after {
     el.dataset.rarity = c.rarity;
     var built = buildCardFrameHtml(c);
     var qty = ownedCount(c.id);
-    var qtyBadgeHtml = qty > 1 ? '<div class="mc-qty-badge">x' + qty + '</div>' : "";
+    // Chiffre seul, sans "x" (cf. .mc-qty-badge) — aligné sur la présentation des jeux de cartes
+    // mobiles de référence. Caché à 1 exemplaire : la grille Album ne montre d'indice que pour un
+    // vrai doublon, 1 étant l'état normal/attendu d'une carte possédée.
+    var qtyBadgeHtml = qty > 1 ? '<div class="mc-qty-badge">' + qty + '</div>' : "";
     el.innerHTML = '<div class="mc-scale">' + built.html + '</div>' + qtyBadgeHtml;
     attachCardImageFallbacks(el, c, built);
     // ratio = largeur réelle du slot (3 colonnes responsive) / 300px, la largeur de référence du
