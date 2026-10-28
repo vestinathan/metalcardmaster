@@ -1936,6 +1936,16 @@ body::after {
 }
 .close-opening[hidden] { display: none; }
 
+/* Paire "Retour à la collection" / "Valider" affichée à la place de .close-opening quand le
+   card-zoom est ouvert depuis le picker de carte à échanger (cf. openCardZoom). Réutilise
+   .account-btn (mêmes styles que le formulaire d'échange) plutôt que .close-opening, pour que
+   "Valider" ressorte visuellement comme une action primaire. */
+.card-zoom-picker-actions {
+  margin-top: 26px; display: flex; gap: 10px;
+}
+.card-zoom-picker-actions[hidden] { display: none; }
+.card-zoom-picker-actions .account-btn { padding: 10px 20px; font-size: 13px; }
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-card { transition: none; }
   .reveal-card.flipping,
@@ -2113,17 +2123,16 @@ body::after {
              stockée dans ce même id (data-card-id) pour ne rien changer au formulaire/submit
              (propose_trade lit toujours #tradeOfferedCard, juste via .dataset.cardId au lieu
              de .value). -->
+        <!-- Plus de champ quantité (offerte/demandée) : un échange ne porte plus que sur 1
+             exemplaire de chaque côté, pour simplifier le formulaire — choix produit, cf.
+             propose_trade appelé plus bas avec p_offered_qty/p_requested_qty figés à 1. -->
         <button type="button" class="card-picker-trigger" id="tradeOfferedCard" data-card-id="">
           <span class="cpt-placeholder">Choisir une carte…</span>
         </button>
-        <label class="friends-field-label">Quantité offerte</label>
-        <input class="account-input" id="tradeOfferedQty" type="number" min="1" value="1">
         <label class="friends-field-label">Carte demandée (optionnel)</label>
         <button type="button" class="card-picker-trigger" id="tradeRequestedCard" data-card-id="">
           <span class="cpt-placeholder">Aucune contrepartie (don)</span>
         </button>
-        <label class="friends-field-label">Quantité demandée</label>
-        <input class="account-input" id="tradeRequestedQty" type="number" min="1" value="1">
         <p class="account-msg" id="tradeModalMsg" hidden></p>
         <div class="account-form-actions">
           <button class="account-btn account-btn-ghost" id="cancelTradeModal" type="button">Annuler</button>
@@ -2212,9 +2221,19 @@ body::after {
 </section>
 
 <!-- ===== VUE AGRANDIE DEPUIS LA COLLECTION ===== -->
+<!-- Deux jeux de CTA mutuellement exclusifs (cf. openCardZoom(card, onValidate)) :
+     - par défaut (album, collection d'un ami) : un seul bouton "Retour à l'album".
+     - depuis le picker de carte à échanger (onValidate fourni) : "Retour à la collection"
+       (referme juste le zoom, revient au picker déjà ouvert derrière) + "Valider" (confirme
+       cette carte pour le champ en cours, referme zoom + picker, et enchaîne sur le
+       récapitulatif de l'échange). -->
 <section class="card-zoom" id="cardZoom" hidden>
   <div class="stage" id="cardZoomStage"></div>
   <button class="close-opening" id="closeCardZoom">Retour à l'album</button>
+  <div class="card-zoom-picker-actions" id="cardZoomPickerActions" hidden>
+    <button class="account-btn account-btn-ghost" id="cardZoomBackToCollection" type="button">Retour à la collection</button>
+    <button class="account-btn account-btn-primary" id="cardZoomValidate" type="button">Valider</button>
+  </div>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
@@ -4808,9 +4827,7 @@ body::after {
   var tradeModalEl = document.getElementById("tradeModal");
   var formProposeTrade = document.getElementById("formProposeTrade");
   var tradeOfferedCardEl = document.getElementById("tradeOfferedCard");
-  var tradeOfferedQtyEl = document.getElementById("tradeOfferedQty");
   var tradeRequestedCardEl = document.getElementById("tradeRequestedCard");
-  var tradeRequestedQtyEl = document.getElementById("tradeRequestedQty");
   var tradeModalMsgEl = document.getElementById("tradeModalMsg");
   var cancelTradeModalBtn = document.getElementById("cancelTradeModal");
 
@@ -4825,7 +4842,10 @@ body::after {
   var cardPickerAllowEmpty = false; // "Carte demandée" seule a une option "aucune contrepartie"
 
   // Pose la valeur choisie sur le bouton déclencheur : mini-vignette (photo réelle si possédée,
-  // sinon le même fallback généré que sur les fiches) + nom + quantité possédée si pertinent.
+  // sinon le même fallback généré que sur les fiches) + nom. Plus de badge de quantité possédée
+  // (cpt-qty) : un échange ne porte plus que sur 1 exemplaire, la quantité réellement possédée
+  // n'a donc plus d'intérêt à être affichée ici — choix produit, cf. suppression des champs
+  // quantité offerte/demandée dans le formulaire.
   function setCardPickerTriggerValue(triggerEl, cardId) {
     triggerEl.dataset.cardId = cardId || "";
     if (!cardId) {
@@ -4837,10 +4857,9 @@ body::after {
     var c = cardsById[cardId];
     if (!c) { triggerEl.innerHTML = '<span class="cpt-placeholder">Choisir une carte…</span>'; return; }
     var thumbSrc = c.photo || c.logo || "";
-    var qtyHtml = triggerEl === tradeOfferedCardEl ? '<span class="cpt-qty">x' + ownedCount(c.id) + '</span>' : "";
     triggerEl.innerHTML =
       '<span class="cpt-thumb">' + (thumbSrc ? '<img src="' + thumbSrc + '" alt="">' : "") + '</span>' +
-      '<span class="cpt-name">' + c.name + '</span>' + qtyHtml;
+      '<span class="cpt-name">' + c.name + '</span>';
   }
 
   // Ouvre le picker plein écran pour un bouton déclencheur donné. ids = la liste d'ids
@@ -4887,12 +4906,19 @@ body::after {
       cell.className = "mini-card mini-card-slot";
       cell.dataset.rarity = c.rarity;
       cell._card = c;
-      cell.addEventListener("click", function () {
-        if (cardPickerTargetEl) setCardPickerTriggerValue(cardPickerTargetEl, c.id);
-        closeCardPicker();
-      });
       cardPickerGridEl.appendChild(cell);
       populateOwnedMiniCard(cell, c);
+      // populateOwnedMiniCard() pose déjà son propre listener "click -> openCardZoom(c)" (cf. plus
+      // bas) : pas besoin d'un listener de sélection séparé ici. On veut justement que le tap
+      // ouvre la fiche en plein écran avec "Retour à la collection"/"Valider" (cf. demande
+      // produit), plutôt que de sélectionner silencieusement sans jamais montrer la carte — donc
+      // on laisse ce comportement par défaut agir, en lui passant seulement le callback de
+      // validation propre au picker (closeCardPicker() est déjà appelé par openCardZoom() via ce
+      // callback, pas besoin de le refaire ici).
+      cell._cardPickerValidate = function () {
+        if (cardPickerTargetEl) setCardPickerTriggerValue(cardPickerTargetEl, c.id);
+        closeCardPicker();
+      };
       // populateOwnedMiniCard() pose "mc-populating" (opacity:0 sur son contenu, cf. CSS) mais ne
       // la retire jamais elle-même — ce retrait n'existe que dans populateMiniCard(), le wrapper
       // utilisé par la grille principale (double rAF : laisser peindre l'état initial avant de
@@ -5236,9 +5262,6 @@ body::after {
     // friendDetailOwnedIds), jamais ici.
     setCardPickerTriggerValue(tradeOfferedCardEl, preselectedCardId || "");
     setCardPickerTriggerValue(tradeRequestedCardEl, "");
-
-    tradeOfferedQtyEl.value = 1;
-    tradeRequestedQtyEl.value = 1;
     showFriendMsg(tradeModalMsgEl, "", null);
     tradeModalEl.dataset.friendId = friendId;
     tradeModalEl.dataset.friendCode = friendCode;
@@ -5254,17 +5277,17 @@ body::after {
       if (!supa) return;
       var friendId = tradeModalEl.dataset.friendId;
       var offeredCardId = tradeOfferedCardEl.dataset.cardId || "";
-      var offeredQty = parseInt(tradeOfferedQtyEl.value, 10) || 1;
       var requestedCardId = tradeRequestedCardEl.dataset.cardId || null;
-      var requestedQty = requestedCardId ? (parseInt(tradeRequestedQtyEl.value, 10) || 1) : null;
+      // Quantités figées à 1 (plus de champ dans le formulaire, cf. choix produit) : un échange ne
+      // porte plus que sur 1 exemplaire de chaque côté.
       if (!offeredCardId) return;
       showFriendMsg(tradeModalMsgEl, "Envoi…", null);
       supa.rpc("propose_trade", {
         p_to_user: friendId,
         p_offered_card_id: offeredCardId,
-        p_offered_qty: offeredQty,
+        p_offered_qty: 1,
         p_requested_card_id: requestedCardId,
-        p_requested_qty: requestedQty
+        p_requested_qty: requestedCardId ? 1 : null
       }).then(function (res) {
         if (res.error) {
           showFriendMsg(tradeModalMsgEl, friendlyErrorMessage(res.error), "error");
@@ -5460,7 +5483,10 @@ body::after {
     }
     if (c.rarity === "legendaire") applyLogoHolo(el, c);
     requestAnimationFrame(function () { fitCardMoves(el); });
-    el.addEventListener("click", function () { openCardZoom(c); });
+    // el._cardPickerValidate (posé par renderCardPickerGrid uniquement, jamais sur l'album/la
+    // collection d'un ami) bascule le zoom en mode "Retour à la collection"/"Valider" au lieu du
+    // simple "Retour à l'album" — cf. openCardZoom().
+    el.addEventListener("click", function () { openCardZoom(c, el._cardPickerValidate); });
   }
 
   // Carte non possédée : silhouette "???" neutre, pas la peine de construire toute la fiche TCG
@@ -5520,8 +5546,15 @@ body::after {
   var cardZoom = document.getElementById("cardZoom");
   var cardZoomStage = document.getElementById("cardZoomStage");
   var closeCardZoomBtn = document.getElementById("closeCardZoom");
+  var cardZoomPickerActionsEl = document.getElementById("cardZoomPickerActions");
+  var cardZoomBackToCollectionBtn = document.getElementById("cardZoomBackToCollection");
+  var cardZoomValidateBtn = document.getElementById("cardZoomValidate");
+  var cardZoomOnValidate = null; // callback courant, posé par openCardZoom() quand appelé depuis le picker
 
-  function openCardZoom(card) {
+  // onValidate (optionnel) : quand fourni (cf. renderCardPickerGrid), le zoom affiche "Retour à
+  // la collection" / "Valider" au lieu du simple "Retour à l'album" — on est alors dans le
+  // parcours de sélection d'une carte à échanger, pas une simple consultation de la collection.
+  function openCardZoom(card, onValidate) {
     cardZoomStage.innerHTML = "";
     // onTap no-op : en vue collection il n'y a pas de "carte suivante", un tap/clic ne fait rien
     // (seul le drag-tilt reste actif) ; la fermeture passe par le bouton ou le fond.
@@ -5534,6 +5567,9 @@ body::after {
     // déclenche que sur un changement de TAILLE, pas de visibilité ; passer de display:none à
     // display:block sans changement de largeur/hauteur CSS ne le redéclenche pas).
     cardZoom.hidden = false;
+    cardZoomOnValidate = onValidate || null;
+    closeCardZoomBtn.hidden = !!cardZoomOnValidate;
+    cardZoomPickerActionsEl.hidden = !cardZoomOnValidate;
     if (window.applyMetallicss) {
       el.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
     }
@@ -5545,9 +5581,21 @@ body::after {
   function closeCardZoom() {
     cardZoom.hidden = true;
     cardZoomStage.innerHTML = "";
+    cardZoomOnValidate = null;
   }
 
   closeCardZoomBtn.addEventListener("click", closeCardZoom);
+  // "Retour à la collection" : referme juste le zoom (le picker, lui, reste ouvert en dessous) —
+  // pas de sélection, l'utilisateur continue de parcourir/chercher une autre carte.
+  cardZoomBackToCollectionBtn.addEventListener("click", closeCardZoom);
+  // "Valider" : confirme la carte actuellement affichée pour le champ en cours (offerte/demandée),
+  // ce qui referme aussi le picker lui-même (cf. le callback posé par renderCardPickerGrid) et
+  // enchaîne sur le récapitulatif de l'échange.
+  cardZoomValidateBtn.addEventListener("click", function () {
+    var cb = cardZoomOnValidate;
+    closeCardZoom();
+    if (cb) cb();
+  });
   cardZoom.addEventListener("click", function (e) {
     if (e.target === cardZoom) closeCardZoom();
   });
