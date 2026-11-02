@@ -2092,7 +2092,7 @@ body::after {
       <section class="friends-section">
         <h2 class="account-sub friends-section-title">Ajouter un ami</h2>
         <form class="account-form friends-add-form" id="formAddFriend">
-          <input class="account-input" id="addFriendInput" type="text" placeholder="Code ami (ex: AB12CD34)" maxlength="8" autocapitalize="characters" autocomplete="off">
+          <input class="account-input" id="addFriendInput" type="text" placeholder="Pseudo ou code ami" maxlength="20" autocapitalize="none" autocomplete="off">
           <button class="account-btn account-btn-primary" type="submit">Ajouter</button>
         </form>
         <p class="account-msg" id="addFriendMsg" hidden></p>
@@ -4826,8 +4826,9 @@ body::after {
   }
 
   // ---- Amis & échanges (Supabase) ----
-  // Schéma déjà créé côté serveur (profiles/friendships/trades + RPC add_friend_by_code,
-  // get_friend_owned_card_ids, propose_trade, accept_trade, resolve_trade). Un ami ne voit que
+  // Schéma déjà créé côté serveur (profiles/friendships/trades + RPC add_friend_by_username_or_code
+  // (ajout par pseudo, avec repli sur le code ami — cf. docs/adr/), get_friend_owned_card_ids,
+  // propose_trade, accept_trade, resolve_trade). Un ami ne voit que
   // la LISTE des cartes qu'on possède (présence), jamais les quantités — cf. RPC
   // get_friend_owned_card_ids qui ne renvoie que des id, volontairement.
   var myFriendCodeEl = document.getElementById("myFriendCode");
@@ -5000,7 +5001,9 @@ body::after {
     STOCK_INSUFFISANT_OFFREUR: "L'offreur n'a plus assez d'exemplaires de cette carte.",
     STOCK_INSUFFISANT_DESTINATAIRE: "Le destinataire n'a plus assez d'exemplaires de la carte demandée.",
     USERNAME_INVALIDE: "Pseudo invalide : 3 à 20 caractères, lettres/chiffres/_/- uniquement.",
-    USERNAME_PRIS: "Ce pseudo est déjà pris, choisis-en un autre."
+    USERNAME_PRIS: "Ce pseudo est déjà pris, choisis-en un autre.",
+    INPUT_VIDE: "Entre un pseudo ou un code ami.",
+    DEJA_AMI: "Vous êtes déjà amis."
   };
   function friendlyErrorMessage(err) {
     if (!err) return "Une erreur est survenue.";
@@ -5052,7 +5055,10 @@ body::after {
       var code = addFriendInput.value.trim();
       if (!code) return;
       showFriendMsg(addFriendMsgEl, "Un instant…", null);
-      supa.rpc("add_friend_by_code", { p_code: code }).then(function (res) {
+      // Nouvelle RPC : essaie d'abord un match par pseudo (insensible à la casse), puis
+      // retombe sur le code ami si aucun pseudo ne correspond. Remplace add_friend_by_code
+      // comme mécanisme d'ajout (cf. docs/adr/, pseudo visible à la création du compte).
+      supa.rpc("add_friend_by_username_or_code", { p_input: code }).then(function (res) {
         if (res.error) {
           showFriendMsg(addFriendMsgEl, friendlyErrorMessage(res.error), "error");
         } else {
@@ -5094,8 +5100,9 @@ body::after {
     });
   }
 
-  // Le pseudo remplace le code ami uniquement comme LABEL d'affichage dans les listes — le code
-  // ami reste le mécanisme réel d'ajout (add_friend_by_code), inchangé.
+  // Le pseudo sert de LABEL d'affichage dans les listes (déjà le cas) ET peut désormais être
+  // utilisé directement pour ajouter un ami (cf. add_friend_by_username_or_code) ; le code ami
+  // reste valide comme repli pour tout profil sans pseudo résolu.
   function friendDisplayLabel(entry) {
     if (!entry) return "········";
     return entry.username || entry.friend_code || "········";
