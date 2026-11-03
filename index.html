@@ -2081,21 +2081,24 @@ body::after {
     <div class="friends-panel" id="friendsPanel">
 
       <section class="friends-section">
-        <h2 class="account-sub friends-section-title">Mon code ami</h2>
+        <h2 class="account-sub friends-section-title">Mon pseudo</h2>
         <div class="friends-code-row">
           <div class="friends-code" id="myFriendCode">········</div>
-          <button class="account-btn account-btn-ghost friends-copy-btn" id="btnCopyFriendCode" type="button">Copier</button>
         </div>
-        <p class="account-msg" id="friendCodeMsg" hidden></p>
       </section>
 
       <section class="friends-section">
         <h2 class="account-sub friends-section-title">Ajouter un ami</h2>
         <form class="account-form friends-add-form" id="formAddFriend">
-          <input class="account-input" id="addFriendInput" type="text" placeholder="Pseudo ou code ami" maxlength="20" autocapitalize="none" autocomplete="off">
-          <button class="account-btn account-btn-primary" type="submit">Ajouter</button>
+          <input class="account-input" id="addFriendInput" type="text" placeholder="Pseudo de ton ami" maxlength="20" autocapitalize="none" autocomplete="off">
+          <button class="account-btn account-btn-primary" type="submit">Envoyer</button>
         </form>
         <p class="account-msg" id="addFriendMsg" hidden></p>
+      </section>
+
+      <section class="friends-section">
+        <h2 class="account-sub friends-section-title">Demandes reçues</h2>
+        <div class="friends-list" id="friendRequestsList"><p class="friends-empty">Aucune demande en attente.</p></div>
       </section>
 
       <section class="friends-section">
@@ -4826,18 +4829,19 @@ body::after {
   }
 
   // ---- Amis & échanges (Supabase) ----
-  // Schéma déjà créé côté serveur (profiles/friendships/trades + RPC add_friend_by_username_or_code
-  // (ajout par pseudo, avec repli sur le code ami — cf. docs/adr/), get_friend_owned_card_ids,
-  // propose_trade, accept_trade, resolve_trade). Un ami ne voit que
-  // la LISTE des cartes qu'on possède (présence), jamais les quantités — cf. RPC
+  // Schéma côté serveur (profiles/friendships/trades). Ajout d'ami désormais par pseudo
+  // uniquement, avec demande/acceptation (plus d'ajout instantané ni de code ami — cf.
+  // docs/adr/) : send_friend_request / accept_friend_request / decline_friend_request,
+  // vues my_friends (amitiés acceptées) et my_pending_friend_requests (demandes reçues).
+  // get_friend_owned_card_ids, propose_trade, accept_trade, resolve_trade inchangées. Un ami
+  // ne voit que la LISTE des cartes qu'on possède (présence), jamais les quantités — cf. RPC
   // get_friend_owned_card_ids qui ne renvoie que des id, volontairement.
   var myFriendCodeEl = document.getElementById("myFriendCode");
-  var btnCopyFriendCode = document.getElementById("btnCopyFriendCode");
-  var friendCodeMsgEl = document.getElementById("friendCodeMsg");
   var formAddFriend = document.getElementById("formAddFriend");
   var addFriendInput = document.getElementById("addFriendInput");
   var addFriendMsgEl = document.getElementById("addFriendMsg");
   var friendsListEl = document.getElementById("friendsList");
+  var friendRequestsListEl = document.getElementById("friendRequestsList");
   var tradesReceivedListEl = document.getElementById("tradesReceivedList");
   var tradesSentListEl = document.getElementById("tradesSentList");
   var friendDetailEl = document.getElementById("friendDetail");
@@ -5014,59 +5018,89 @@ body::after {
     return err.message || "Une erreur est survenue.";
   }
 
+  // Affiche simplement le pseudo du compte courant (plus de code ami à copier).
   function loadMyFriendCode() {
     if (!supa || !currentUser || !myFriendCodeEl) return;
-    supa.from("profiles").select("friend_code").eq("user_id", currentUser.id).maybeSingle()
+    supa.from("profiles").select("username").eq("user_id", currentUser.id).maybeSingle()
       .then(function (res) {
         if (res.error || !res.data) return;
-        myFriendCodeEl.textContent = res.data.friend_code;
+        myFriendCodeEl.textContent = res.data.username || "········";
       })
       .catch(function () {});
-  }
-
-  if (btnCopyFriendCode) {
-    btnCopyFriendCode.addEventListener("click", function () {
-      var code = myFriendCodeEl ? myFriendCodeEl.textContent.trim() : "";
-      if (!code || code.indexOf("·") !== -1) return;
-      var done = function () { showFriendMsg(friendCodeMsgEl, "Code copié !", "success"); };
-      var fail = function () { showFriendMsg(friendCodeMsgEl, "Impossible de copier automatiquement — sélectionne le code manuellement.", "error"); };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(done).catch(fail);
-      } else {
-        try {
-          var ta = document.createElement("textarea");
-          ta.value = code;
-          ta.style.position = "fixed";
-          ta.style.opacity = "0";
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand("copy");
-          document.body.removeChild(ta);
-          done();
-        } catch (e) { fail(); }
-      }
-    });
   }
 
   if (formAddFriend) {
     formAddFriend.addEventListener("submit", function (ev) {
       ev.preventDefault();
       if (!supa || !currentUser) return;
-      var code = addFriendInput.value.trim();
-      if (!code) return;
+      var username = addFriendInput.value.trim();
+      if (!username) return;
       showFriendMsg(addFriendMsgEl, "Un instant…", null);
-      // Nouvelle RPC : essaie d'abord un match par pseudo (insensible à la casse), puis
-      // retombe sur le code ami si aucun pseudo ne correspond. Remplace add_friend_by_code
-      // comme mécanisme d'ajout (cf. docs/adr/, pseudo visible à la création du compte).
-      supa.rpc("add_friend_by_username_or_code", { p_input: code }).then(function (res) {
+      // Envoie une demande d'ami (en attente) ; l'ami doit l'accepter depuis "Demandes reçues"
+      // pour que l'amitié devienne effective (cf. docs/adr/ : plus d'ajout instantané).
+      supa.rpc("send_friend_request", { p_username: username }).then(function (res) {
         if (res.error) {
           showFriendMsg(addFriendMsgEl, friendlyErrorMessage(res.error), "error");
         } else {
-          showFriendMsg(addFriendMsgEl, "Ami ajouté !", "success");
+          showFriendMsg(addFriendMsgEl, "Demande envoyée !", "success");
           addFriendInput.value = "";
-          loadFriendsList();
         }
       }).catch(function (e) { showFriendMsg(addFriendMsgEl, friendlyErrorMessage(e), "error"); });
+    });
+  }
+
+  // Résout le pseudo d'un user_id (avec cache), puis rend la liste des demandes reçues.
+  function loadFriendRequests() {
+    if (!supa || !currentUser || !friendRequestsListEl) return;
+    supa.from("my_pending_friend_requests").select("from_user_id, created_at").then(function (res) {
+      if (res.error) {
+        friendRequestsListEl.innerHTML = '<p class="friends-empty">Erreur de chargement.</p>';
+        return;
+      }
+      var rows = res.data || [];
+      if (!rows.length) {
+        friendRequestsListEl.innerHTML = '<p class="friends-empty">Aucune demande en attente.</p>';
+        return;
+      }
+      var idsToResolve = rows.map(function (r) { return r.from_user_id; }).filter(function (id) { return !friendCodeCache[id]; });
+      var resolve = idsToResolve.length
+        ? supa.from("profiles").select("user_id, username, friend_code").in("user_id", idsToResolve)
+        : Promise.resolve({ data: [] });
+      resolve.then(function (res2) {
+        (res2.data || []).forEach(function (p) { friendCodeCache[p.user_id] = { username: p.username, friend_code: p.friend_code }; });
+        renderFriendRequests(rows);
+      }).catch(function () { renderFriendRequests(rows); });
+    }).catch(function () {
+      friendRequestsListEl.innerHTML = '<p class="friends-empty">Erreur de chargement.</p>';
+    });
+  }
+
+  // Même grammaire visuelle que renderTradesReceived (.trade-row/.trade-row-actions) : une
+  // ligne non cliquable avec un descriptif à gauche et deux boutons Accepter/Refuser à droite.
+  function renderFriendRequests(rows) {
+    friendRequestsListEl.innerHTML = "";
+    rows.forEach(function (r) {
+      var entry = friendCodeCache[r.from_user_id];
+      var label = friendDisplayLabel(entry);
+      var row = document.createElement("div");
+      row.className = "trade-row";
+      row.innerHTML =
+        '<div class="trade-row-desc">' + label + ' souhaite t\'ajouter en ami</div>' +
+        '<div class="trade-row-actions">' +
+          '<button class="account-btn account-btn-primary" data-action="accept">Accepter</button>' +
+          '<button class="account-btn account-btn-ghost" data-action="decline">Refuser</button>' +
+        '</div>';
+      row.querySelector('[data-action="accept"]').addEventListener("click", function () {
+        supa.rpc("accept_friend_request", { p_from_user_id: r.from_user_id }).then(function (res) {
+          if (!res.error) { loadFriendRequests(); loadFriendsList(); }
+        });
+      });
+      row.querySelector('[data-action="decline"]').addEventListener("click", function () {
+        supa.rpc("decline_friend_request", { p_from_user_id: r.from_user_id }).then(function (res) {
+          if (!res.error) loadFriendRequests();
+        });
+      });
+      friendRequestsListEl.appendChild(row);
     });
   }
 
@@ -5415,6 +5449,7 @@ body::after {
     if (!currentUser) return;
     loadMyFriendCode();
     loadFriendsList();
+    loadFriendRequests();
     loadTradesLists();
   }
 
