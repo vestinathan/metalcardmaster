@@ -1413,17 +1413,20 @@ body::after {
   position: absolute; inset: 0; z-index: 12;
   border-radius: inherit;
   pointer-events: none;
-  /* soft-light plutôt qu'overlay : overlay inverse les tons sombres (donnait un voile bleuté
-     sur le fond quasi-noir des cartes, et teintait les badges au lieu de les éclairer) —
-     soft-light reste doux sur les zones sombres, en n'éclaircissant que localement autour du
-     point de contact, plus proche d'un vrai reflet de plastique que d'un filtre de couleur. */
+  /* screen plutôt qu'overlay/soft-light : les deux premiers mélangent la lumière blanche avec
+     la TEINTE du pixel sous-jacent (overlay inverse carrément les tons sombres, soft-light
+     prenait la teinte bleue du badge PV et la renvoyait en halo bleuté sur toute la carte) —
+     screen ajoute de la lumière sans jamais changer la teinte en dessous (base + lumière,
+     jamais de mélange chromatique), donc le reflet reste blanc/chaud quoi qu'il y ait dessous.
+     Opacité volontairement plus basse qu'avant (cf. --glare-strength) car screen est un ajout
+     direct de luminance, visible même à faible intensité — pas besoin de monter aussi haut. */
   background-image: radial-gradient(
     circle at var(--glare-x, 50%) var(--glare-y, 50%),
-    rgba(255,255,255,0.9) 0%,
-    rgba(255,255,255,0.35) 22%,
-    rgba(255,255,255,0) 55%
+    rgba(255,250,235,0.55) 0%,
+    rgba(255,250,235,0.18) 24%,
+    rgba(255,250,235,0) 55%
   );
-  mix-blend-mode: soft-light;
+  mix-blend-mode: screen;
   opacity: calc(var(--glare-opacity, 0) * var(--glare-strength, 0.55));
   transition: opacity .25s ease;
 }
@@ -6740,7 +6743,7 @@ body::after {
     // Intensité de base du reflet (cf. .reveal-card::before) selon la rareté — porté de
     // simeydotme/hover-tilt (glareIntensity) : une commune accroche un peu la lumière, une
     // légendaire beaucoup plus, pour que le tilt se sente comme une vraie récompense visuelle.
-    var GLARE_STRENGTH = { commune: 0.3, rare: 0.45, ultra_rare: 0.65, legendaire: 0.9 };
+    var GLARE_STRENGTH = { commune: 0.22, rare: 0.32, ultra_rare: 0.45, legendaire: 0.6 };
     el.style.setProperty("--glare-strength", String(GLARE_STRENGTH[card.rarity] || 0.4));
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
