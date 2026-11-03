@@ -2003,18 +2003,28 @@ body::after {
 
     <div class="account-divider"><span>ou</span></div>
 
-    <form class="account-form" id="gateFormSignIn">
+    <!-- Bascule Connexion/Inscription : affiche/masque dynamiquement les champs propres à
+         l'inscription (confirmation du mot de passe, pseudo) plutôt que de tout montrer en
+         permanence dans un même form à deux submit buttons (ancien comportement). Réutilise
+         .account-btn (pas de nouveau composant visuel) ; l'onglet actif est signalé par la
+         classe .active, même convention que .tab-btn.active pour l'album/booster/amis. -->
+    <div class="account-form-actions" id="gateModeTabs">
+      <button type="button" class="account-btn account-btn-primary active" data-mode="signin">Se connecter</button>
+      <button type="button" class="account-btn account-btn-ghost" data-mode="signup">Créer un compte</button>
+    </div>
+
+    <form class="account-form" id="gateFormSignIn" data-mode="signin">
       <input class="account-input" type="email" name="email" placeholder="Email" autocomplete="email" required>
       <input class="account-input" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required minlength="6">
-      <!-- Pseudo : utile seulement pour "Créer un compte", mais laissé toujours visible (pas de
-           show/hide dynamique selon le bouton visé) pour rester simple avec deux submit buttons
-           dans un même form. Non "required" ici : la validation réelle (requis + regex) se fait
-           dans le handler submit, seulement quand mode === "signup". -->
-      <input class="account-input" type="text" name="username" id="gateSignupUsername" placeholder="Pseudo (3-20 car. : lettres/chiffres/_/-)" autocomplete="username" maxlength="20">
-      <p class="account-hint">Pseudo requis pour un nouveau compte : 3 à 20 caractères, lettres/chiffres/_/-.</p>
+      <!-- Champs propres à l'inscription : masqués par défaut (mode "signin"), affichés par JS
+           quand on bascule sur l'onglet "Créer un compte" (cf. gateModeTabs). Non "required"
+           dans le markup pour ne pas bloquer la soumission en mode connexion où ils sont
+           masqués ; la validation réelle se fait dans le handler submit selon le mode. -->
+      <input class="account-input gate-signup-only" type="password" name="passwordConfirm" id="gateSignupPasswordConfirm" placeholder="Confirmer le mot de passe" autocomplete="new-password" minlength="6" hidden>
+      <input class="account-input gate-signup-only" type="text" name="username" id="gateSignupUsername" placeholder="Pseudo (3-20 car. : lettres/chiffres/_/-)" autocomplete="username" maxlength="20" hidden>
+      <p class="account-hint gate-signup-only" hidden>Pseudo requis pour un nouveau compte : 3 à 20 caractères, lettres/chiffres/_/-.</p>
       <div class="account-form-actions">
-        <button class="account-btn account-btn-primary" type="submit" data-mode="signin">Se connecter</button>
-        <button class="account-btn account-btn-ghost" type="submit" data-mode="signup">Créer un compte</button>
+        <button class="account-btn account-btn-primary" type="submit" id="gateSubmitBtn" data-mode="signin">Se connecter</button>
       </div>
     </form>
 
@@ -4507,6 +4517,35 @@ body::after {
   var gateMsgEl = document.getElementById("gateAccountMsg");
   var gateBtnGoogleSignIn = document.getElementById("gateBtnGoogleSignIn");
   var gateFormSignIn = document.getElementById("gateFormSignIn");
+  var gateModeTabsEl = document.getElementById("gateModeTabs");
+  var gateSubmitBtn = document.getElementById("gateSubmitBtn");
+  var gateSignupPasswordConfirmEl = document.getElementById("gateSignupPasswordConfirm");
+
+  // Bascule Connexion/Inscription : affiche/masque les champs .gate-signup-only, met à jour le
+  // texte et le data-mode du bouton submit, et l'état .active des deux onglets.
+  if (gateModeTabsEl && gateFormSignIn) {
+    gateModeTabsEl.querySelectorAll("[data-mode]").forEach(function (tabBtn) {
+      tabBtn.addEventListener("click", function () {
+        var mode = tabBtn.dataset.mode;
+        gateFormSignIn.dataset.mode = mode;
+        gateModeTabsEl.querySelectorAll("[data-mode]").forEach(function (b) {
+          var isActive = b === tabBtn;
+          b.classList.toggle("active", isActive);
+          // La couleur (orange plein vs. fond translucide) doit suivre l'onglet actif, pas
+          // rester figée sur le premier bouton — sinon les deux onglets restent orange/gris
+          // indépendamment du clic.
+          b.classList.toggle("account-btn-primary", isActive);
+          b.classList.toggle("account-btn-ghost", !isActive);
+        });
+        gateFormSignIn.querySelectorAll(".gate-signup-only").forEach(function (el) { el.hidden = (mode !== "signup"); });
+        if (gateSubmitBtn) {
+          gateSubmitBtn.dataset.mode = mode;
+          gateSubmitBtn.textContent = mode === "signup" ? "Créer un compte" : "Se connecter";
+        }
+        showGateMsg("", null);
+      });
+    });
+  }
 
   // Écran bloquant "Choisis ton pseudo" : affiché entre #authGate et #appRoot quand l'utilisateur
   // est connecté mais que son profil n'a pas encore de username (nouveau compte Google, ou ancien
@@ -4740,18 +4779,26 @@ body::after {
     gateFormSignIn.addEventListener("submit", function (ev) {
       ev.preventDefault();
       if (!supa) { showGateMsg("Connexion indisponible pour le moment.", "error"); return; }
-      var submitter = ev.submitter;
-      var mode = submitter ? submitter.dataset.mode : "signin";
+      // Mode piloté par l'onglet actif (cf. gateModeTabs) plutôt que par le bouton cliqué : il
+      // n'y a plus qu'un seul submit button désormais.
+      var mode = gateFormSignIn.dataset.mode || "signin";
       var email = gateFormSignIn.email.value.trim();
       var password = gateFormSignIn.password.value;
       var username = gateFormSignIn.username.value.trim();
       if (!email || !password) return;
-      // Pseudo obligatoire uniquement à l'inscription — validé côté client avant même d'appeler
-      // signUp, pour un retour immédiat (la vraie contrainte d'unicité est vérifiée côté serveur
-      // par set_my_username juste après, une fois le compte créé).
-      if (mode === "signup" && !USERNAME_RE.test(username)) {
-        showGateMsg("Pseudo invalide : 3 à 20 caractères, lettres/chiffres/_/- uniquement.", "error");
-        return;
+      if (mode === "signup") {
+        var passwordConfirm = gateSignupPasswordConfirmEl ? gateSignupPasswordConfirmEl.value : "";
+        if (password !== passwordConfirm) {
+          showGateMsg("Les mots de passe ne correspondent pas.", "error");
+          return;
+        }
+        // Pseudo obligatoire uniquement à l'inscription — validé côté client avant même d'appeler
+        // signUp, pour un retour immédiat (la vraie contrainte d'unicité est vérifiée côté serveur
+        // par set_my_username juste après, une fois le compte créé).
+        if (!USERNAME_RE.test(username)) {
+          showGateMsg("Pseudo invalide : 3 à 20 caractères, lettres/chiffres/_/- uniquement.", "error");
+          return;
+        }
       }
       showGateMsg("Un instant…", null);
       var action = mode === "signup"
