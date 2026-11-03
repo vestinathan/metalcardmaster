@@ -1395,6 +1395,12 @@ body::after {
   display: flex; flex-direction: column;
   overflow: visible;
   cursor: grab;
+  /* Sans ça, iOS Safari peut intercepter le premier mouvement du doigt comme un geste de
+     scroll/pan avant que pointermove n'atteigne cet élément — le tilt au doigt (et donc le
+     reflet holo ci-dessous, qui dépend de ces mêmes événements) ne se déclenchait alors jamais
+     sur mobile réel, alors que ça fonctionnait en test desktop (souris, pas de ce comportement
+     d'interception). Même fix déjà appliqué à .pc-tear-zone pour le geste de déchirure. */
+  touch-action: none;
 }
 .reveal-card.showing { opacity: 1; transform: rotateX(0deg) rotateY(0deg) scale(1); }
 .reveal-card[hidden] { display: none; }
