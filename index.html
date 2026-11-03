@@ -1436,81 +1436,6 @@ body::after {
   opacity: calc(var(--glare-opacity, 0) * var(--glare-strength, 0.55));
   transition: opacity .25s ease;
 }
-
-/* Effet holo complet — calibré directement sur une vraie capture vidéo de la démo officielle
-   (poke-holo.simey.me, que le sandbox ne peut pas charger lui-même ; l'utilisateur a filmé son
-   écran). Deux essais précédents (bandes diagonales façon regular-holo.css, puis glitter en
-   color-dodge plein) étaient tous deux trop loin du vrai rendu : la vidéo montre une
-   illustration qui reste PARFAITEMENT visible à tout instant (jamais blanchie ni assombrie au
-   point de disparaître), avec seulement (1) un grain scintillant fin et discret, surtout
-   perceptible sur les zones sombres, et (2) un large halo de couleur diffus (pas de bandes
-   nettes) qui se déplace doucement avec le pointeur — l'ensemble beaucoup plus subtil que ce
-   qu'on avait fait jusque-là. Mesure de référence : la zone centrale de la carte s'assombrit
-   légèrement en moyenne pendant le drag (pas d'éclaircissement agressif), donc pas de
-   color-dodge à forte opacité ici.
-   Réservé à ultra_rare/légendaire — rare/commune gardent le simple reflet ::before ci-dessus.
-   Couvre toute la carte (pas de clip-path sur la seule fenêtre photo : sur la vraie démo, le
-   cadre scintille aussi). */
-.rc-holo {
-  display: none;
-  position: absolute; inset: 0; z-index: 11;
-  border-radius: inherit;
-  overflow: hidden;
-  pointer-events: none;
-}
-.reveal-card[data-rarity="ultra_rare"] .rc-holo,
-.reveal-card[data-rarity="legendaire"] .rc-holo {
-  display: block;
-}
-.rc-holo::before,
-.rc-holo::after {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: inherit;
-}
-/* Grain scintillant fin — glitter.png en overlay à faible opacité, PAS en color-dodge (qui
-   blanchissait toute la zone dans les essais précédents). overlay garde la texture comme un
-   vrai grain qui éclaircit/assombrit localement selon ce qu'il y a dessous, sans jamais
-   remplacer l'image. */
-.rc-holo::before {
-  background-image: url("images/holo/glitter.png");
-  /* taille réduite à l'échelle réelle d'un grain (pas un pavé agrandi qui devient un bruit
-     uniforme façon "neige TV" — 1er essai à 55%/overlay+brightness(2.2) écrasait toute la
-     carte, logo compris, en gris granuleux omniprésent). Sur la vraie capture (frame_012), le
-     grain est fin et ne se voit vraiment que sur les zones déjà sombres — overlay fait ça
-     naturellement (préserve les tons clairs, n'ajoute du contraste que dans les tons moyens/
-     foncés). */
-  background-size: 18% 18%;
-  background-position:
-    calc(30% + (var(--glare-x, 50%) * 0.5)) calc(30% + (var(--glare-y, 50%) * 0.5));
-  filter: brightness(1.3) contrast(1.2);
-  mix-blend-mode: overlay;
-  opacity: calc(var(--glare-opacity, 0) * var(--holo-strength, 0.35));
-  transition: opacity .25s ease;
-}
-/* Voile diagonal coloré — sur la vraie capture (frame_012/015) ce n'est pas un halo radial flou
-   mais des bandes diagonales fines et translucides (violet/rose en haut, bleu/cyan au centre),
-   très proches du 1er essai (regular-holo.css) mais à une opacité BEAUCOUP plus basse et en
-   soft-light (teinte sans jamais éclaircir au point d'effacer l'image, contrairement à
-   color-dodge testé avant). */
-.rc-holo::after {
-  background-image: repeating-linear-gradient(115deg,
-    hsl(320, 85%, 65%), hsl(260, 85%, 65%), hsl(200, 85%, 60%), hsl(150, 85%, 55%), hsl(50, 85%, 60%),
-    hsl(320, 85%, 65%), hsl(260, 85%, 65%), hsl(200, 85%, 60%), hsl(150, 85%, 55%), hsl(50, 85%, 60%)
-  );
-  background-size: 300% 300%;
-  background-position:
-    calc(((50% - var(--glare-x, 50%)) * 2) + 50%) calc(((50% - var(--glare-y, 50%)) * 2) + 50%);
-  mix-blend-mode: soft-light;
-  opacity: calc(var(--glare-opacity, 0) * var(--holo-strength, 0.35));
-  transition: opacity .25s ease;
-}
-/* Légendaire : voile un peu plus présent, pour distinguer visuellement l'ultra_rare (foil
-   correct) de la légendaire (foil le plus flamboyant), comme le vrai jeu distingue holo
-   classique et secret rare — sans jamais revenir à l'opacité excessive des essais précédents. */
-.reveal-card[data-rarity="legendaire"] .rc-holo::after {
-  opacity: calc(var(--glare-opacity, 0) * var(--holo-strength, 0.35) * 1.3);
-}
 /* flip d'apparition : au tap, la nouvelle carte entre en tournant sur elle-même (profil à 90°
    passant par une tranche quasi invisible, comme un vrai retournement de carte) plutôt que le
    simple scale+fade précédent. Piloté par la classe .flipping, retirée une fois l'animation finie
@@ -6812,7 +6737,6 @@ body::after {
     // légendaire (cf. sélecteur [data-rarity="legendaire"] en CSS) ; inoffensif sur les autres
     // raretés, où il reste en display normal mais opacity:0 (aucun .flipping ne le déclenche).
     el.innerHTML = built.html +
-      '<div class="rc-holo"></div>' +
       '<div class="rc-flip-flash"></div>' +
       '<div class="rc-smoke-veil">' +
         '<div class="rc-smoke-layer rc-smoke-0"></div>' +
@@ -6827,10 +6751,6 @@ body::after {
     // légendaire beaucoup plus, pour que le tilt se sente comme une vraie récompense visuelle.
     var GLARE_STRENGTH = { commune: 0.22, rare: 0.32, ultra_rare: 0.45, legendaire: 0.6 };
     el.style.setProperty("--glare-strength", String(GLARE_STRENGTH[card.rarity] || 0.4));
-    // Intensité du foil multi-couches (.rc-holo, cf. CSS) — seules ultra_rare/légendaire
-    // l'affichent (display:none sinon), mais la variable est posée pour toutes par cohérence.
-    var HOLO_STRENGTH = { commune: 0, rare: 0, ultra_rare: 0.2, legendaire: 0.28 };
-    el.style.setProperty("--holo-strength", String(HOLO_STRENGTH[card.rarity] || 0));
 
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
     // applyTilt(dx, dy, px, py) : dx/dy pilotent la rotation 3D (comme avant), px/py (position
