@@ -529,14 +529,15 @@ body::after {
 .booster-body {
   position: absolute; inset: 0;
   overflow: hidden;
+  /* v2 : silhouette adoucie — l'ancien polygone resserrait ~3.3 points de chaque côté façon
+     "sablier" très marqué, jugé disgracieux. Amplitude réduite à ~1 point, bords quasi droits,
+     juste une légère respiration pour ne pas avoir un rectangle parfaitement plat. */
   clip-path: polygon(
-    3.3% 0%, 96.4% 0%,
-    95.0% 10%, 94.3% 20%, 93.3% 30%, 92.7% 40%, 92.6% 50%,
-    92.4% 60%, 92.0% 70%, 91.4% 80%, 90.7% 87%,
-    91.4% 93%, 92.3% 100%,
-    6.0% 100%, 6.3% 93%, 7.6% 87%,
-    8.0% 80%, 8.0% 70%, 7.4% 60%, 7.0% 50%,
-    6.6% 40%, 6.1% 30%, 5.4% 20%, 4.6% 10%
+    1.0% 0%, 99.0% 0%,
+    98.5% 15%, 98.2% 35%, 98.1% 50%,
+    98.2% 65%, 98.5% 80%, 99.0% 93%, 99.3% 100%,
+    0.7% 100%, 1.0% 93%, 1.5% 80%,
+    1.8% 65%, 1.9% 50%, 1.8% 35%, 1.5% 15%
   );
   box-shadow:
     0 22px 40px -18px rgba(0,0,0,0.75),
@@ -1176,14 +1177,14 @@ body::after {
   width: auto; height: 100%; aspect-ratio: 0.58;
   max-width: 100%;
   overflow: hidden;
+  /* v2 : même silhouette adoucie que .booster-body (cf. commentaire là-bas) — bords quasi
+     droits au lieu du resserrement "sablier" prononcé d'origine. */
   clip-path: polygon(
-    3.3% 0%, 96.4% 0%,
-    95.0% 10%, 94.3% 20%, 93.3% 30%, 92.7% 40%, 92.6% 50%,
-    92.4% 60%, 92.0% 70%, 91.4% 80%, 90.7% 87%,
-    91.4% 93%, 92.3% 100%,
-    6.0% 100%, 6.3% 93%, 7.6% 87%,
-    8.0% 80%, 8.0% 70%, 7.4% 60%, 7.0% 50%,
-    6.6% 40%, 6.1% 30%, 5.4% 20%, 4.6% 10%
+    1.0% 0%, 99.0% 0%,
+    98.5% 15%, 98.2% 35%, 98.1% 50%,
+    98.2% 65%, 98.5% 80%, 99.0% 93%, 99.3% 100%,
+    0.7% 100%, 1.0% 93%, 1.5% 80%,
+    1.8% 65%, 1.9% 50%, 1.8% 35%, 1.5% 15%
   );
   box-shadow: 0 24px 56px -16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.08);
 }
