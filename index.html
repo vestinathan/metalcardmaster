@@ -1171,8 +1171,8 @@ body::after {
    propre ratio 0.58 centré à l'intérieur du stage, au lieu d'un simple inset:0. */
 .pack-closed {
   position: absolute; left: 50%; top: 50%;
-  transform: translate(-50%, -50%) rotateX(var(--tear-rx, 0deg)) rotateY(var(--tear-ry, 0deg));
-  transform-style: preserve-3d;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
   width: auto; height: 100%; aspect-ratio: 0.58;
   max-width: 100%;
   overflow: hidden;
@@ -1195,10 +1195,7 @@ body::after {
 }
 /* logo + "5 cartes" + photo + nom d'édition : mêmes proportions que .booster-brand-mark/
    .booster-count/.booster-art/.booster-edition sur l'étagère (même recette, dimensions
-   identiques en %). Posés en enfants directs de .pack-closed (pas dans .pc-half) : ils sont
-   de toute façon effacés dès le premier contact de glissement (cf. onTearStart, qui vide
-   .pack-closed en ne laissant que les deux moitiés) — exactement comme .pc-mark aujourd'hui,
-   l'œil suit le geste de déchirure, pas le texte/la photo. */
+   identiques en %). Posés en enfants directs de .pack-closed. */
 .pc-brand-mark {
   position: absolute; left: 0; right: 0; top: 0; height: 16%; z-index: 5;
   display: flex; align-items: center; justify-content: center;
@@ -1257,93 +1254,6 @@ body::after {
 .pc-full-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pc-mark-overlay {
   text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 1px 6px rgba(0,0,0,0.7);
-}
-
-/* bande de découpe : zone à saisir, suit le doigt horizontalement pour arracher le haut du
-   paquet — même grammaire visuelle que .booster-tear sur l'étagère. */
-.pc-tear-zone {
-  position: absolute; left: 0; right: 0; top: 14%; z-index: 4;
-  height: 56px; margin-top: -28px;
-  display: flex; align-items: center; justify-content: center;
-  touch-action: none; cursor: grab;
-}
-.pc-tear-zone:active { cursor: grabbing; }
-.pc-tear-line {
-  position: absolute; left: 8%; right: 8%; height: 1px;
-  background-image: repeating-linear-gradient(90deg, rgba(249,234,211,0.6) 0 5px, transparent 5px 11px);
-}
-.pc-tear-line::before, .pc-tear-line::after {
-  content: ""; position: absolute; top: -3px; width: 7px; height: 7px;
-  border-radius: 50%; background: rgba(249,234,211,0.6);
-}
-.pc-tear-line::before { left: -3px; }
-.pc-tear-line::after { right: -3px; }
-.pc-tear-hint {
-  position: absolute; top: 12px; left: 0; right: 0; text-align: center;
-  font-family: var(--font-label); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-  color: rgba(249,234,211,0.5);
-}
-
-/* les deux moitiés, découpées au niveau de la ligne de déchirure ; le haut suit le drag.
-   v2 motion design : .stage passe en 3D pendant le drag (cf. JS onTearMove qui pose
-   --tear-rx/--tear-ry sur .pack-closed), et le bord de coupe devient une ligne irrégulière
-   (clip-path en dents de scie, cf. --tear-notch-*) au lieu d'une séparation parfaitement nette
-   — un vrai emballage ne se déchire jamais en ligne droite. */
-.pc-half {
-  position: absolute; left: 0; right: 0; height: 50%;
-  overflow: hidden;
-  background: inherit;
-  transform-style: preserve-3d;
-}
-.pc-half.pc-top {
-  top: 0; border-radius: 10px 10px 0 0;
-  transform-origin: 50% 100%;
-  clip-path: polygon(
-    0% 0%, 100% 0%, 100% 100%,
-    94% 94%, 88% 100%, 82% 93%, 76% 100%, 70% 95%, 64% 100%,
-    58% 92%, 52% 100%, 46% 94%, 40% 100%, 34% 96%, 28% 100%,
-    22% 93%, 16% 100%, 10% 95%, 4% 100%, 0% 93%
-  );
-}
-.pc-half.pc-bottom {
-  bottom: 0; border-radius: 0 0 16px 16px;
-  clip-path: polygon(
-    0% 7%, 4% 0%, 10% 5%, 16% 0%, 22% 7%, 28% 0%, 34% 4%, 40% 0%,
-    46% 6%, 52% 0%, 58% 8%, 64% 0%, 70% 5%, 76% 0%, 82% 7%, 88% 0%, 94% 6%, 100% 0%,
-    100% 100%, 0% 100%
-  );
-}
-.pc-half .pack-closed-fill { position: absolute; inset: 0; }
-.pc-half.pc-top .pack-closed-fill { top: auto; bottom: 0; height: 200%; }
-.pc-half.pc-bottom .pack-closed-fill { top: 0; height: 200%; }
-
-/* reflet spéculaire : bande de lumière diagonale qui suit le doigt pendant le drag (posée en
-   JS via --tear-sheen-x, en % de la largeur du paquet), pour donner au plastique chromé
-   l'accroche de lumière d'un vrai emballage qu'on manipule, pas une texture statique. */
-.pc-sheen {
-  position: absolute; inset: 0; z-index: 3; pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    75deg,
-    transparent calc(var(--tear-sheen-x, 50%) - 22%),
-    rgba(255,255,255,0.55) var(--tear-sheen-x, 50%),
-    transparent calc(var(--tear-sheen-x, 50%) + 22%)
-  );
-  mix-blend-mode: overlay;
-  transition: opacity .15s ease;
-}
-.pack-closed.tearing .pc-sheen { opacity: 1; }
-
-.pack-closed.tearing-done .pc-top {
-  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .35s ease .05s;
-  transform: translate(150%, -70%) rotate(-28deg) rotateX(-35deg); opacity: 0;
-}
-.pack-closed.tearing-done .pc-bottom {
-  transition: transform .34s cubic-bezier(.3,0,.2,1) .06s, opacity .3s ease .1s;
-  transform: translateY(22%) scale(0.97); opacity: 0;
-}
-.pack-closed.snapping .pc-top {
-  transition: transform .32s cubic-bezier(.2,.9,.25,1.3);
 }
 
 /* flash directionnel : jaillit du point de déchirure (posé en JS via --tear-flash-x/-y, en %
@@ -2077,7 +1987,6 @@ body::after {
   .reveal-card[data-rarity="legendaire"].flipping .rc-smoke-veil,
   .reveal-card[data-rarity="legendaire"].flipping .rc-smoke-layer { animation: none; opacity: 0; }
   .stage.legendary-shake { animation: none; }
-  .pack-closed.tearing-done .pc-top, .pack-closed.tearing-done .pc-bottom { transition: none; opacity: 0; }
   .tear-flash.flashing { animation: none; }
   .reveal-card[data-rarity="legendaire"] .rc-frame,
   .reveal-card[data-rarity="legendaire"] .rc-frame::after,
@@ -2341,11 +2250,7 @@ body::after {
 <section class="opening" id="opening" hidden>
   <div class="stage" id="stage">
     <div class="pack-closed" id="packClosed" data-edition="legend">
-      <div class="pc-mark">Glisser pour déchirer</div>
-      <div class="pc-tear-zone" id="pcTearZone">
-        <div class="pc-tear-hint">↔</div>
-        <div class="pc-tear-line"></div>
-      </div>
+      <div class="pc-mark">Toucher pour ouvrir</div>
     </div>
     <div class="tear-flash" id="tearFlash"></div>
     <!-- reveal-cards injectées en JS -->
@@ -6263,13 +6168,10 @@ body::after {
     revealEls = [];
 
     // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
-    // utilise ce même visuel comme contenu de l'écran "pack fermé" plutôt que de sauter
-    // directement au tirage — le geste de déchirure (glisser pour arracher le haut) s'applique
-    // maintenant à toutes les éditions, full-art comprises (cf. onTearStart : chaque moitié
-    // garde une copie complète du visuel, clippée, donc ça fonctionne aussi bien avec une image
-    // unique qu'avec les éléments séparés brand/count/art/edition de l'ancien habillage).
+    // utilise ce même visuel comme contenu de l'écran "pack fermé". Ouverture au simple tap
+    // (cf. initTapToOpen) — l'ancien geste de glisser-déchirer a été retiré, trop complexe à
+    // faire bien rendre visuellement ; un tap + flash bref suffit.
     packClosed.hidden = false;
-    packClosed.classList.remove("tearing-done", "snapping");
     var fullArtImg = sourceBtn ? sourceBtn.querySelector(".booster-full-art img") : null;
     var brandImg = sourceBtn ? sourceBtn.querySelector(".booster-brand-mark img") : null;
     var editionLabel = sourceBtn ? sourceBtn.querySelector(".booster-edition") : null;
@@ -6278,119 +6180,32 @@ body::after {
     if (fullArtImg) {
       packClosed.innerHTML =
         '<div class="pc-full-art"><img src="' + fullArtImg.src + '" alt="' + fullArtImg.alt + '"></div>' +
-        '<div class="pc-sheen"></div>' +
-        '<div class="pc-mark pc-mark-overlay">Glisser pour déchirer</div>' +
-        '<div class="pc-tear-zone" id="pcTearZone">' +
-          '<div class="pc-tear-hint">↔</div>' +
-          '<div class="pc-tear-line"></div>' +
-        '</div>';
+        '<div class="pc-mark pc-mark-overlay">Toucher pour ouvrir</div>';
     } else {
       packClosed.innerHTML =
         (brandImg ? '<div class="pc-brand-mark"><img src="' + brandImg.src + '" alt="' + brandImg.alt + '"></div>' : "") +
         (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
         (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
         (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "") +
-        '<div class="pc-sheen"></div>' +
-        '<div class="pc-mark">Glisser pour déchirer</div>' +
-        '<div class="pc-tear-zone" id="pcTearZone">' +
-          '<div class="pc-tear-hint">↔</div>' +
-          '<div class="pc-tear-line"></div>' +
-        '</div>';
+        '<div class="pc-mark">Toucher pour ouvrir</div>';
     }
-    initTearGesture();
+    initTapToOpen();
   }
 
-  // ---- Geste de déchirure : glisser horizontalement sur la bande pointillée pour décoller le
-  // haut du booster, comme sur Pokémon TCG Pocket. Le haut suit le doigt en continu (translation
-  // + légère rotation + fondu) ; au-delà d'un seuil de progression, l'ouverture se termine
-  // automatiquement, sinon le haut revient se recoller ("snap back"). ----
-  var TEAR_THRESHOLD = 0.55; // fraction de la largeur du paquet à parcourir pour déclencher l'ouverture
-  var tearDragging = false, tearStartX = 0, tearPackTop = null, tearWidth = 1;
+  // ---- Ouverture au tap : un simple clic/tap sur le pack déclenche directement le flash + la
+  // révélation, sans geste de glisser. ----
+  var tapToOpenArmed = false;
 
-  function initTearGesture() {
-    var zone = document.getElementById("pcTearZone");
-    if (!zone) return;
-    zone.addEventListener("pointerdown", onTearStart);
+  function initTapToOpen() {
+    tapToOpenArmed = true;
+    packClosed.addEventListener("click", onTapToOpen);
   }
 
-  function onTearStart(e) {
-    if (tearDragging) return;
-    tearDragging = true;
-    tearStartX = e.clientX;
-    tearWidth = packClosed.getBoundingClientRect().width || 1;
-    packClosed.classList.remove("snapping");
-    packClosed.classList.add("tearing"); // active le reflet spéculaire (.pc-sheen) pendant tout le drag
-
-    // Construit les deux moitiés au moment du premier contact, pour que le drag les anime.
-    // Chaque moitié garde une copie COMPLETE du visuel du paquet (logo/photo/édition/texte,
-    // snapshotés depuis packClosed.innerHTML avant de le vider) plutôt que de se retrouver
-    // vide — sans ça, au premier contact le paquet perdait tout son habillage et le doigt ne
-    // "déchirait" plus qu'un dégradé chromé neutre, sans aucun repère visuel (bug constaté :
-    // le geste semblait creux, comme si le paquet avait déjà été vidé avant même de l'arracher).
-    // .pack-closed-fill (cf. CSS : 200% de haut, décalé pour que pc-top montre le HAUT du
-    // visuel et pc-bottom le BAS) + overflow:hidden sur .pc-half fait l'effet de découpe :
-    // chaque moitié affiche la moitié du visuel qui lui correspond, pas le tout redimensionné.
-    var snapshot = packClosed.innerHTML;
-    var topHalf = document.createElement("div");
-    topHalf.className = "pc-half pc-top";
-    topHalf.innerHTML = '<div class="pack-closed-fill">' + snapshot + '</div>';
-    var bottomHalf = document.createElement("div");
-    bottomHalf.className = "pc-half pc-bottom";
-    bottomHalf.innerHTML = '<div class="pack-closed-fill">' + snapshot + '</div>';
-    packClosed.innerHTML = "";
-    packClosed.appendChild(bottomHalf);
-    packClosed.appendChild(topHalf);
-    tearPackTop = topHalf;
-
-    try { e.target.setPointerCapture && e.target.setPointerCapture(e.pointerId); } catch (err) {}
-    window.addEventListener("pointermove", onTearMove);
-    window.addEventListener("pointerup", onTearEnd);
-    window.addEventListener("pointercancel", onTearEnd);
-  }
-
-  function onTearMove(e) {
-    if (!tearDragging || !tearPackTop) return;
-    var dx = e.clientX - tearStartX;
-    var dir = dx >= 0 ? 1 : -1;
-    var progress = Math.min(1, Math.abs(dx) / (tearWidth * TEAR_THRESHOLD));
-    var slide = dx; // le haut suit le doigt 1:1, dans les deux sens
-    var lift = progress * 26; // se soulève légèrement en se décollant
-    var rotate = dir * progress * 14;
-    var fade = 1 - progress * 0.7;
-    tearPackTop.style.transform = "translate(" + slide + "px, " + (-lift) + "px) rotate(" + rotate + "deg) rotateX(" + (-progress * 18) + "deg)";
-    tearPackTop.style.opacity = String(fade);
-    tearPackTop.dataset.progress = String(progress);
-
-    // Inclinaison 3D du paquet entier (rotateX/rotateY via les variables CSS posées sur
-    // .pack-closed, cf. règle de base) : le paquet "répond" au geste comme un vrai objet tenu
-    // en main, pas juste la moitié supérieure qui se déplace à plat.
-    packClosed.style.setProperty("--tear-rx", (progress * 6) + "deg");
-    packClosed.style.setProperty("--tear-ry", (dir * progress * -10) + "deg");
-
-    // Reflet spéculaire : suit la position horizontale du doigt dans le paquet (en %), pour
-    // donner l'impression que la lumière glisse sur l'emballage pendant qu'on le manipule.
-    var sheenX = Math.max(0, Math.min(100, 50 + (dx / tearWidth) * 100));
-    packClosed.style.setProperty("--tear-sheen-x", sheenX + "%");
-  }
-
-  function onTearEnd() {
-    if (!tearDragging) return;
-    tearDragging = false;
-    window.removeEventListener("pointermove", onTearMove);
-    window.removeEventListener("pointerup", onTearEnd);
-    window.removeEventListener("pointercancel", onTearEnd);
-    var progress = tearPackTop ? parseFloat(tearPackTop.dataset.progress || "0") : 0;
-    if (progress >= 1) {
-      finishTear();
-    } else if (tearPackTop) {
-      // pas assez loin : le haut revient se recoller à sa place
-      packClosed.classList.remove("tearing");
-      packClosed.classList.add("snapping");
-      packClosed.style.setProperty("--tear-rx", "0deg");
-      packClosed.style.setProperty("--tear-ry", "0deg");
-      tearPackTop.style.transform = "translate(0px, 0px) rotate(0deg) rotateX(0deg)";
-      tearPackTop.style.opacity = "1";
-    }
+  function onTapToOpen() {
+    if (!tapToOpenArmed) return;
+    tapToOpenArmed = false;
+    packClosed.removeEventListener("click", onTapToOpen);
+    finishTear();
   }
 
   // Génère quelques éclats métalliques qui giclent du point de rupture au moment du flash —
@@ -6415,28 +6230,17 @@ body::after {
   }
 
   function finishTear() {
-    // retire le style inline posé pendant le drag : la classe tearing-done prend le relais avec
-    // sa propre transition CSS (.4s) vers la position finale, en partant visuellement de là où
-    // le doigt l'a lâché (le navigateur interpole depuis le style calculé actuel).
-    if (tearPackTop) {
-      tearPackTop.style.transform = "";
-      tearPackTop.style.opacity = "";
-    }
-    packClosed.classList.remove("tearing");
-    packClosed.classList.add("tearing-done");
-    packClosed.style.setProperty("--tear-rx", "0deg");
-    packClosed.style.setProperty("--tear-ry", "0deg");
-    // Le flash et les éclats jaillissent du point où le doigt a lâché (bord de la ligne de
-    // déchirure, à ~14% de hauteur du paquet — cf. .pc-tear-zone), pas du centre de l'écran.
+    // Ouverture au tap (plus de geste de glisser) : flash bref centré sur le pack, puis
+    // révélation de la première carte.
     tearFlash.style.setProperty("--tear-flash-x", "50%");
-    tearFlash.style.setProperty("--tear-flash-y", "14%");
+    tearFlash.style.setProperty("--tear-flash-y", "50%");
     tearFlash.classList.add("flashing");
-    spawnTearSparks(50, 14);
+    spawnTearSparks(50, 50);
     setTimeout(function () {
       packClosed.hidden = true;
       tearFlash.classList.remove("flashing");
       nextCard();
-    }, 420);
+    }, 280);
   }
 
   // Construit, insère et joue l'animation d'entrée (flip, ou voile de fumée pour les légendaires)
