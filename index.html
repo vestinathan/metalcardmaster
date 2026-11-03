@@ -1248,6 +1248,14 @@ body::after {
   text-transform: uppercase; color: rgba(249,234,211,0.75); text-shadow: 0 1px 0 rgba(0,0,0,0.5);
   transition: opacity .2s ease;
 }
+/* visuel plein cadre (édition full-art, cf. .booster-full-art) : l'image habille déjà tout le
+   paquet (logo/illustration/texte inclus), donc pas de pc-brand-mark/pc-art/pc-edition séparés
+   — juste l'image en plein cadre et le mark "glisser" posé par-dessus en overlay. */
+.pc-full-art { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.pc-full-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pc-mark-overlay {
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 1px 6px rgba(0,0,0,0.7);
+}
 
 /* bande de découpe : zone à saisir, suit le doigt horizontalement pour arracher le haut du
    paquet — même grammaire visuelle que .booster-tear sur l'étagère. */
@@ -6157,31 +6165,38 @@ body::after {
     revealEls = [];
 
     // Visuel plein cadre (packshot déjà habillé, logo/illustration/texte inclus dans l'image) :
-    // pas d'écran "pack fermé" ni de geste de déchirure pour ce mode, le clic ouvre directement
-    // le tirage de cartes — cf. .booster-full-art.
-    var fullArtImg = sourceBtn ? sourceBtn.querySelector(".booster-full-art img") : null;
-    if (fullArtImg) {
-      packClosed.hidden = true;
-      nextCard();
-      return;
-    }
-
+    // utilise ce même visuel comme contenu de l'écran "pack fermé" plutôt que de sauter
+    // directement au tirage — le geste de déchirure (glisser pour arracher le haut) s'applique
+    // maintenant à toutes les éditions, full-art comprises (cf. onTearStart : chaque moitié
+    // garde une copie complète du visuel, clippée, donc ça fonctionne aussi bien avec une image
+    // unique qu'avec les éléments séparés brand/count/art/edition de l'ancien habillage).
     packClosed.hidden = false;
     packClosed.classList.remove("tearing-done", "snapping");
+    var fullArtImg = sourceBtn ? sourceBtn.querySelector(".booster-full-art img") : null;
     var brandImg = sourceBtn ? sourceBtn.querySelector(".booster-brand-mark img") : null;
     var editionLabel = sourceBtn ? sourceBtn.querySelector(".booster-edition") : null;
     var countLabel = sourceBtn ? sourceBtn.querySelector(".booster-count") : null;
     var artImg = sourceBtn ? sourceBtn.querySelector(".booster-art img") : null;
-    packClosed.innerHTML =
-      (brandImg ? '<div class="pc-brand-mark"><img src="' + brandImg.src + '" alt="' + brandImg.alt + '"></div>' : "") +
-      (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
-      (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
-      (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "") +
-      '<div class="pc-mark">Glisser pour déchirer</div>' +
-      '<div class="pc-tear-zone" id="pcTearZone">' +
-        '<div class="pc-tear-hint">↔</div>' +
-        '<div class="pc-tear-line"></div>' +
-      '</div>';
+    if (fullArtImg) {
+      packClosed.innerHTML =
+        '<div class="pc-full-art"><img src="' + fullArtImg.src + '" alt="' + fullArtImg.alt + '"></div>' +
+        '<div class="pc-mark pc-mark-overlay">Glisser pour déchirer</div>' +
+        '<div class="pc-tear-zone" id="pcTearZone">' +
+          '<div class="pc-tear-hint">↔</div>' +
+          '<div class="pc-tear-line"></div>' +
+        '</div>';
+    } else {
+      packClosed.innerHTML =
+        (brandImg ? '<div class="pc-brand-mark"><img src="' + brandImg.src + '" alt="' + brandImg.alt + '"></div>' : "") +
+        (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
+        (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
+        (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "") +
+        '<div class="pc-mark">Glisser pour déchirer</div>' +
+        '<div class="pc-tear-zone" id="pcTearZone">' +
+          '<div class="pc-tear-hint">↔</div>' +
+          '<div class="pc-tear-line"></div>' +
+        '</div>';
+    }
     initTearGesture();
   }
 
@@ -6205,11 +6220,22 @@ body::after {
     tearWidth = packClosed.getBoundingClientRect().width || 1;
     packClosed.classList.remove("snapping");
 
-    // construit les deux moitiés au moment du premier contact, pour que le drag les anime
+    // Construit les deux moitiés au moment du premier contact, pour que le drag les anime.
+    // Chaque moitié garde une copie COMPLETE du visuel du paquet (logo/photo/édition/texte,
+    // snapshotés depuis packClosed.innerHTML avant de le vider) plutôt que de se retrouver
+    // vide — sans ça, au premier contact le paquet perdait tout son habillage et le doigt ne
+    // "déchirait" plus qu'un dégradé chromé neutre, sans aucun repère visuel (bug constaté :
+    // le geste semblait creux, comme si le paquet avait déjà été vidé avant même de l'arracher).
+    // .pack-closed-fill (cf. CSS : 200% de haut, décalé pour que pc-top montre le HAUT du
+    // visuel et pc-bottom le BAS) + overflow:hidden sur .pc-half fait l'effet de découpe :
+    // chaque moitié affiche la moitié du visuel qui lui correspond, pas le tout redimensionné.
+    var snapshot = packClosed.innerHTML;
     var topHalf = document.createElement("div");
     topHalf.className = "pc-half pc-top";
+    topHalf.innerHTML = '<div class="pack-closed-fill">' + snapshot + '</div>';
     var bottomHalf = document.createElement("div");
     bottomHalf.className = "pc-half pc-bottom";
+    bottomHalf.innerHTML = '<div class="pack-closed-fill">' + snapshot + '</div>';
     packClosed.innerHTML = "";
     packClosed.appendChild(bottomHalf);
     packClosed.appendChild(topHalf);
