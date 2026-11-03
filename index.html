@@ -1188,6 +1188,15 @@ body::after {
   box-shadow: 0 24px 56px -16px rgba(0,0,0,0.8), inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 .pack-closed[hidden] { display: none; }
+/* paquet "plein cadre" (packshot fourni en entier, type Metallica) : même traitement qu'à
+   l'étagère (cf. .booster:has(.booster-full-art) plus haut) — aucun habillage CSS, pas de
+   silhouette galbée ni de clip-path, l'image affichée telle quelle à son propre ratio, pour que
+   le visuel soit identique au pixel près entre la vignette de l'étagère et l'écran d'ouverture. */
+.pack-closed:has(.pc-full-art) {
+  aspect-ratio: 0.576;
+  clip-path: none; box-shadow: none; background: none; overflow: visible;
+}
+.pack-closed:has(.pc-full-art)::before { display: none; }
 .pack-closed::before {
   content: ""; position: absolute; inset: 0; z-index: 1;
   opacity: 0.45; mix-blend-mode: overlay;
@@ -1251,7 +1260,7 @@ body::after {
    paquet (logo/illustration/texte inclus), donc pas de pc-brand-mark/pc-art/pc-edition séparés
    — juste l'image en plein cadre et le mark "glisser" posé par-dessus en overlay. */
 .pc-full-art { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.pc-full-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pc-full-art img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .pc-mark-overlay {
   text-shadow: 0 1px 2px rgba(0,0,0,0.9), 0 1px 6px rgba(0,0,0,0.7);
 }
