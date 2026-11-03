@@ -1170,7 +1170,9 @@ body::after {
    tel quel sur un conteneur 5/7 il s'étire et déforme bandes/galbe. .pack-closed prend donc son
    propre ratio 0.58 centré à l'intérieur du stage, au lieu d'un simple inset:0. */
 .pack-closed {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) rotateX(var(--tear-rx, 0deg)) rotateY(var(--tear-ry, 0deg));
+  transform-style: preserve-3d;
   width: auto; height: 100%; aspect-ratio: 0.58;
   max-width: 100%;
   overflow: hidden;
@@ -1282,43 +1284,101 @@ body::after {
   color: rgba(249,234,211,0.5);
 }
 
-/* les deux moitiés, découpées au niveau de la ligne de déchirure ; le haut suit le drag */
+/* les deux moitiés, découpées au niveau de la ligne de déchirure ; le haut suit le drag.
+   v2 motion design : .stage passe en 3D pendant le drag (cf. JS onTearMove qui pose
+   --tear-rx/--tear-ry sur .pack-closed), et le bord de coupe devient une ligne irrégulière
+   (clip-path en dents de scie, cf. --tear-notch-*) au lieu d'une séparation parfaitement nette
+   — un vrai emballage ne se déchire jamais en ligne droite. */
 .pc-half {
   position: absolute; left: 0; right: 0; height: 50%;
   overflow: hidden;
   background: inherit;
+  transform-style: preserve-3d;
 }
 .pc-half.pc-top {
   top: 0; border-radius: 10px 10px 0 0;
-  transform-origin: 50% 0%;
+  transform-origin: 50% 100%;
+  clip-path: polygon(
+    0% 0%, 100% 0%, 100% 100%,
+    94% 94%, 88% 100%, 82% 93%, 76% 100%, 70% 95%, 64% 100%,
+    58% 92%, 52% 100%, 46% 94%, 40% 100%, 34% 96%, 28% 100%,
+    22% 93%, 16% 100%, 10% 95%, 4% 100%, 0% 93%
+  );
 }
-.pc-half.pc-bottom { bottom: 0; border-radius: 0 0 16px 16px; }
+.pc-half.pc-bottom {
+  bottom: 0; border-radius: 0 0 16px 16px;
+  clip-path: polygon(
+    0% 7%, 4% 0%, 10% 5%, 16% 0%, 22% 7%, 28% 0%, 34% 4%, 40% 0%,
+    46% 6%, 52% 0%, 58% 8%, 64% 0%, 70% 5%, 76% 0%, 82% 7%, 88% 0%, 94% 6%, 100% 0%,
+    100% 100%, 0% 100%
+  );
+}
 .pc-half .pack-closed-fill { position: absolute; inset: 0; }
 .pc-half.pc-top .pack-closed-fill { top: auto; bottom: 0; height: 200%; }
 .pc-half.pc-bottom .pack-closed-fill { top: 0; height: 200%; }
 
+/* reflet spéculaire : bande de lumière diagonale qui suit le doigt pendant le drag (posée en
+   JS via --tear-sheen-x, en % de la largeur du paquet), pour donner au plastique chromé
+   l'accroche de lumière d'un vrai emballage qu'on manipule, pas une texture statique. */
+.pc-sheen {
+  position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    75deg,
+    transparent calc(var(--tear-sheen-x, 50%) - 22%),
+    rgba(255,255,255,0.55) var(--tear-sheen-x, 50%),
+    transparent calc(var(--tear-sheen-x, 50%) + 22%)
+  );
+  mix-blend-mode: overlay;
+  transition: opacity .15s ease;
+}
+.pack-closed.tearing .pc-sheen { opacity: 1; }
+
 .pack-closed.tearing-done .pc-top {
-  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .4s ease;
-  transform: translate(140%, -60%) rotate(-22deg); opacity: 0;
+  transition: transform .4s cubic-bezier(.4,0,.2,1), opacity .35s ease .05s;
+  transform: translate(150%, -70%) rotate(-28deg) rotateX(-35deg); opacity: 0;
 }
 .pack-closed.tearing-done .pc-bottom {
-  transition: transform .3s ease .08s, opacity .3s ease .08s;
-  transform: translateY(30%); opacity: 0;
+  transition: transform .34s cubic-bezier(.3,0,.2,1) .06s, opacity .3s ease .1s;
+  transform: translateY(22%) scale(0.97); opacity: 0;
 }
 .pack-closed.snapping .pc-top {
   transition: transform .32s cubic-bezier(.2,.9,.25,1.3);
 }
 
+/* flash directionnel : jaillit du point de déchirure (posé en JS via --tear-flash-x/-y, en %
+   du paquet) plutôt qu'un cercle centré uniforme — lit comme un éclat qui part de la rupture. */
 .tear-flash {
-  position: absolute; inset: -20%; z-index: 5;
-  background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(255,255,255,0) 65%);
+  position: absolute; inset: -30%; z-index: 6;
+  background: radial-gradient(
+    circle at var(--tear-flash-x, 50%) var(--tear-flash-y, 50%),
+    rgba(255,255,255,0.98), rgba(255,246,222,0.55) 30%, rgba(255,255,255,0) 62%
+  );
   opacity: 0; pointer-events: none;
 }
-.tear-flash.flashing { animation: tearFlash .5s ease-out forwards; }
+.tear-flash.flashing { animation: tearFlash .55s cubic-bezier(.1,.6,.3,1) forwards; }
 @keyframes tearFlash {
   0% { opacity: 0; }
-  18% { opacity: 1; }
+  14% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* éclats métalliques : quelques fragments qui giclent du point de déchirure au moment du flash,
+   purement décoratifs (un seul élément réutilisé par rareté de carte n'existe pas ici), générés
+   en JS (cf. spawnTearSparks) avec une direction/distance aléatoires par éclat. */
+.tear-spark {
+  position: absolute; z-index: 7; left: var(--sx, 50%); top: var(--sy, 50%);
+  width: 5px; height: 5px; margin: -2.5px;
+  background: linear-gradient(135deg, #fff, #f9ead3 60%, #caa968);
+  border-radius: 1px;
+  opacity: 0; pointer-events: none;
+  animation: tearSparkFly .5s cubic-bezier(.15,.7,.3,1) both;
+  animation-delay: var(--sd, 0s);
+}
+@keyframes tearSparkFly {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.6) rotate(0deg); }
+  10% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--sdx, 0), var(--sdy, 0)) scale(0.2) rotate(140deg); }
 }
 
 .tap-hint { margin-top: 22px; font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; }
@@ -1338,6 +1398,35 @@ body::after {
 }
 .reveal-card.showing { opacity: 1; transform: rotateX(0deg) rotateY(0deg) scale(1); }
 .reveal-card[hidden] { display: none; }
+
+/* Reflet holographique qui suit le doigt — porté de la logique de simeydotme/hover-tilt
+   (github.com/simeydotme/hover-tilt, MIT) : un dégradé radial centré sur la position du
+   pointeur (--glare-x/--glare-y, posés en JS dans applyTilt), en mix-blend-mode overlay pour
+   que la lumière "accroche" la carte plutôt que de la peindre par-dessus. --glare-opacity
+   monte avec l'intensité du tilt (0 au repos) et redescend en douceur à resetTilt — c'est ce
+   qui donne l'impression d'une carte qu'on manipule en main, pas un filtre statique.
+   Intensité de base par rareté (--glare-strength, posée une fois par buildRevealCard) : léger
+   sur une commune, net sur une légendaire — cf. applyTilt qui multiplie l'opacité par cette
+   valeur plutôt que d'avoir le même éclat partout. */
+.reveal-card::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 12;
+  border-radius: inherit;
+  pointer-events: none;
+  /* soft-light plutôt qu'overlay : overlay inverse les tons sombres (donnait un voile bleuté
+     sur le fond quasi-noir des cartes, et teintait les badges au lieu de les éclairer) —
+     soft-light reste doux sur les zones sombres, en n'éclaircissant que localement autour du
+     point de contact, plus proche d'un vrai reflet de plastique que d'un filtre de couleur. */
+  background-image: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255,255,255,0.9) 0%,
+    rgba(255,255,255,0.35) 22%,
+    rgba(255,255,255,0) 55%
+  );
+  mix-blend-mode: soft-light;
+  opacity: calc(var(--glare-opacity, 0) * var(--glare-strength, 0.55));
+  transition: opacity .25s ease;
+}
 /* flip d'apparition : au tap, la nouvelle carte entre en tournant sur elle-même (profil à 90°
    passant par une tranche quasi invisible, comme un vrai retournement de carte) plutôt que le
    simple scale+fade précédent. Piloté par la classe .flipping, retirée une fois l'animation finie
@@ -6180,6 +6269,7 @@ body::after {
     if (fullArtImg) {
       packClosed.innerHTML =
         '<div class="pc-full-art"><img src="' + fullArtImg.src + '" alt="' + fullArtImg.alt + '"></div>' +
+        '<div class="pc-sheen"></div>' +
         '<div class="pc-mark pc-mark-overlay">Glisser pour déchirer</div>' +
         '<div class="pc-tear-zone" id="pcTearZone">' +
           '<div class="pc-tear-hint">↔</div>' +
@@ -6191,6 +6281,7 @@ body::after {
         (countLabel ? '<span class="pc-count">' + countLabel.textContent + '</span>' : "") +
         (artImg ? '<div class="pc-art"><img src="' + artImg.src + '" alt="' + artImg.alt + '"></div>' : "") +
         (editionLabel ? '<div class="pc-edition">' + editionLabel.textContent + '</div>' : "") +
+        '<div class="pc-sheen"></div>' +
         '<div class="pc-mark">Glisser pour déchirer</div>' +
         '<div class="pc-tear-zone" id="pcTearZone">' +
           '<div class="pc-tear-hint">↔</div>' +
@@ -6219,6 +6310,7 @@ body::after {
     tearStartX = e.clientX;
     tearWidth = packClosed.getBoundingClientRect().width || 1;
     packClosed.classList.remove("snapping");
+    packClosed.classList.add("tearing"); // active le reflet spéculaire (.pc-sheen) pendant tout le drag
 
     // Construit les deux moitiés au moment du premier contact, pour que le drag les anime.
     // Chaque moitié garde une copie COMPLETE du visuel du paquet (logo/photo/édition/texte,
@@ -6256,9 +6348,20 @@ body::after {
     var lift = progress * 26; // se soulève légèrement en se décollant
     var rotate = dir * progress * 14;
     var fade = 1 - progress * 0.7;
-    tearPackTop.style.transform = "translate(" + slide + "px, " + (-lift) + "px) rotate(" + rotate + "deg)";
+    tearPackTop.style.transform = "translate(" + slide + "px, " + (-lift) + "px) rotate(" + rotate + "deg) rotateX(" + (-progress * 18) + "deg)";
     tearPackTop.style.opacity = String(fade);
     tearPackTop.dataset.progress = String(progress);
+
+    // Inclinaison 3D du paquet entier (rotateX/rotateY via les variables CSS posées sur
+    // .pack-closed, cf. règle de base) : le paquet "répond" au geste comme un vrai objet tenu
+    // en main, pas juste la moitié supérieure qui se déplace à plat.
+    packClosed.style.setProperty("--tear-rx", (progress * 6) + "deg");
+    packClosed.style.setProperty("--tear-ry", (dir * progress * -10) + "deg");
+
+    // Reflet spéculaire : suit la position horizontale du doigt dans le paquet (en %), pour
+    // donner l'impression que la lumière glisse sur l'emballage pendant qu'on le manipule.
+    var sheenX = Math.max(0, Math.min(100, 50 + (dx / tearWidth) * 100));
+    packClosed.style.setProperty("--tear-sheen-x", sheenX + "%");
   }
 
   function onTearEnd() {
@@ -6272,9 +6375,33 @@ body::after {
       finishTear();
     } else if (tearPackTop) {
       // pas assez loin : le haut revient se recoller à sa place
+      packClosed.classList.remove("tearing");
       packClosed.classList.add("snapping");
-      tearPackTop.style.transform = "translate(0px, 0px) rotate(0deg)";
+      packClosed.style.setProperty("--tear-rx", "0deg");
+      packClosed.style.setProperty("--tear-ry", "0deg");
+      tearPackTop.style.transform = "translate(0px, 0px) rotate(0deg) rotateX(0deg)";
       tearPackTop.style.opacity = "1";
+    }
+  }
+
+  // Génère quelques éclats métalliques qui giclent du point de rupture au moment du flash —
+  // purs éléments décoratifs, retirés du DOM après leur animation (cf. leur propre durée .5s).
+  function spawnTearSparks(originXPercent, originYPercent) {
+    var count = 7;
+    for (var i = 0; i < count; i++) {
+      var spark = document.createElement("div");
+      spark.className = "tear-spark";
+      var angle = (Math.random() * Math.PI) - Math.PI / 2 - Math.PI / 2; // éventail vers le haut
+      var dist = 40 + Math.random() * 70;
+      spark.style.setProperty("--sx", originXPercent + "%");
+      spark.style.setProperty("--sy", originYPercent + "%");
+      spark.style.setProperty("--sdx", (Math.cos(angle) * dist) + "px");
+      spark.style.setProperty("--sdy", (Math.sin(angle) * dist) + "px");
+      spark.style.setProperty("--sd", (Math.random() * 0.08) + "s");
+      packClosed.parentNode.appendChild(spark);
+      (function (el) {
+        setTimeout(function () { el.remove(); }, 650);
+      })(spark);
     }
   }
 
@@ -6286,8 +6413,16 @@ body::after {
       tearPackTop.style.transform = "";
       tearPackTop.style.opacity = "";
     }
+    packClosed.classList.remove("tearing");
     packClosed.classList.add("tearing-done");
+    packClosed.style.setProperty("--tear-rx", "0deg");
+    packClosed.style.setProperty("--tear-ry", "0deg");
+    // Le flash et les éclats jaillissent du point où le doigt a lâché (bord de la ligne de
+    // déchirure, à ~14% de hauteur du paquet — cf. .pc-tear-zone), pas du centre de l'écran.
+    tearFlash.style.setProperty("--tear-flash-x", "50%");
+    tearFlash.style.setProperty("--tear-flash-y", "14%");
     tearFlash.classList.add("flashing");
+    spawnTearSparks(50, 14);
     setTimeout(function () {
       packClosed.hidden = true;
       tearFlash.classList.remove("flashing");
@@ -6602,17 +6737,32 @@ body::after {
       '</div>';
     attachCardImageFallbacks(el, card, built);
 
+    // Intensité de base du reflet (cf. .reveal-card::before) selon la rareté — porté de
+    // simeydotme/hover-tilt (glareIntensity) : une commune accroche un peu la lumière, une
+    // légendaire beaucoup plus, pour que le tilt se sente comme une vraie récompense visuelle.
+    var GLARE_STRENGTH = { commune: 0.3, rare: 0.45, ultra_rare: 0.65, legendaire: 0.9 };
+    el.style.setProperty("--glare-strength", String(GLARE_STRENGTH[card.rarity] || 0.4));
+
     var isDragging = false, startX = 0, startY = 0, curRX = 0, curRY = 0;
-    function applyTilt(dx, dy) {
+    // applyTilt(dx, dy, px, py) : dx/dy pilotent la rotation 3D (comme avant), px/py (position
+    // normalisée 0-1 du doigt DANS la carte) pilotent le centre du reflet — cf. --glare-x/-y en
+    // CSS. Les deux sont déduits du même geste mais ne représentent pas la même chose : dx/dy est
+    // un déplacement depuis le point de contact initial, px/py est une position absolue sur la
+    // carte, nécessaire pour que le reflet parte du bon endroit plutôt que du centre à chaque fois.
+    function applyTilt(dx, dy, px, py) {
       curRY = Math.max(-18, Math.min(18, dx * 0.12));
       curRX = Math.max(-18, Math.min(18, -dy * 0.12));
       el.style.transform = "rotateX(" + curRX + "deg) rotateY(" + curRY + "deg) scale(1)";
-      el.style.setProperty("--holo-angle", (curRY * 6 + curRX * 6) + "deg");
+      if (px != null && py != null) {
+        el.style.setProperty("--glare-x", (px * 100) + "%");
+        el.style.setProperty("--glare-y", (py * 100) + "%");
+      }
+      el.style.setProperty("--glare-opacity", "1");
     }
     function resetTilt() {
       curRX = 0; curRY = 0;
       el.style.transform = "rotateX(0deg) rotateY(0deg) scale(1)";
-      el.style.setProperty("--holo-angle", "0deg");
+      el.style.setProperty("--glare-opacity", "0");
     }
     el.addEventListener("pointerdown", function (e) {
       isDragging = true; startX = e.clientX; startY = e.clientY;
@@ -6620,7 +6770,10 @@ body::after {
     });
     el.addEventListener("pointermove", function (e) {
       if (!isDragging) return;
-      applyTilt(e.clientX - startX, e.clientY - startY);
+      var rect = el.getBoundingClientRect();
+      var px = rect.width ? (e.clientX - rect.left) / rect.width : 0.5;
+      var py = rect.height ? (e.clientY - rect.top) / rect.height : 0.5;
+      applyTilt(e.clientX - startX, e.clientY - startY, px, py);
     });
     el.addEventListener("pointerup", function (e) {
       var moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
