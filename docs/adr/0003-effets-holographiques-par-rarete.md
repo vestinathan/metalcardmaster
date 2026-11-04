@@ -35,6 +35,9 @@ du flip d'apparition ; règles du cadre brossé dans la section « CADRE MÉTAL 
   même feuille : leur éclat varie de façon cohérente (noir → rouge → blanc). Une tache de lumière
   (`--spot-x/y`, posée côté opposé à l'inclinaison) est intersectée avec le motif (`mask-composite: intersect`) ;
   `--tilt-amt` et `--card-opacity` font tout disparaître à plat. Aucun dessin à chaque image (CSS pur ensuite).
+- **Ultra rare : le motif reste dans la fenêtre** (`.rc-window`), jamais sur le cadre : il s'arrête au bord intérieur de la
+  bande rouge. La couche `.rc-holo-bolts` est donc posée sur la fenêtre (position + rayon de coin lus sur `.rc-window`) ;
+  pour les rares c'est la zone texte.
 - Le masque du motif retire les musiciens (`images/masks`), et le logo, la pastille de rareté, le badge « Artiste »,
   les PV et l'ATK (`collectHoles`, mesurés en `offsetLeft/Top`, recalculés au chargement du logo).
 
@@ -80,7 +83,7 @@ du flip d'apparition ; règles du cadre brossé dans la section « CADRE MÉTAL 
 Serveur local + Playwright (voir `CLAUDE.md`), viewport 420×860 : tenir le doigt appuyé, déplacer vers
 gauche / droite / haut / bas, vérifier que la lumière apparaît du côté opposé, qu'elle disparaît à plat et
 qu'aucune bande ne traverse la carte. Vérifié le 2026-11-04 sur les 21 légendaires (cadre brossé, relief présent,
-pas d'éclairs, aucun débordement de texte) et sur 4 ultra rares (éclairs, pas de relief). **Non testé** : comportement de `mask-composite` sur Safari, performance sur téléphone réel, zoom depuis l'album
+pas d'éclairs, aucun débordement de texte), sur 9 ultra rares et 6 rares (motif + masque en place, pas de relief). **Non testé** : comportement de `mask-composite` sur Safari, performance sur téléphone réel, zoom depuis l'album
 (utilise aussi `buildRevealCard`), cartes sans masque en conditions réelles.
 
 ## À faire / ouvert
