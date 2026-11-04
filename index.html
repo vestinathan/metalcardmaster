@@ -6870,7 +6870,14 @@ body::after {
         }
       }
       // la couche couvre toute la carte (ultra rare) ou la seule zone texte (rare)
-      boxR = foilMode ? zone : { x: 0, y: 0, w: W, h: H };
+      // ultra rare : le motif reste DANS la fenêtre, jamais sur le cadre (il s'arrête au bord intérieur de la bande rouge)
+      var winB = foilMode ? null : el.querySelector(".rc-window");
+      if (foilMode) boxR = zone;
+      else if (winB && winB.offsetWidth) {
+        var wb = offsetIn(winB, el);
+        boxR = { x: wb.x, y: wb.y, w: winB.offsetWidth, h: winB.offsetHeight };
+        bolts.style.borderRadius = getComputedStyle(winB).borderTopLeftRadius || "6px";
+      } else boxR = { x: 0, y: 0, w: W, h: H };
       bolts.style.left = boxR.x + "px"; bolts.style.top = boxR.y + "px";
       bolts.style.width = boxR.w + "px"; bolts.style.height = boxR.h + "px";
       collectHoles();
