@@ -29,15 +29,21 @@ du flip d'apparition ; règles du cadre brossé dans la section « CADRE MÉTAL 
   en bas → haut. Tache de lumière gaussienne autour de `0.5 - t·k`.
 - Apparition et disparition **progressives** : `--card-opacity` monte vite (0.07) et retombe lentement
   (0.035, ~1 s) ; l'intensité dépend aussi de l'amplitude de l'inclinaison (`smooth`). À plat : rien.
-- Les motifs sont dessinés dans un canvas (`.rc-holo-glitter`), regroupés par couleur/alpha dans des
-  `Path2D` (sinon ~67 ms/frame).
+- **Éclairs = foil réfléchissant, comme les « reverse holo » de poke-holo** (`.rc-holo-bolts`) : le motif est un
+  **masque fixe** (`--bolts-mask`, un PNG calculé une fois en JS par `buildBoltMask`) et, derrière, une **feuille de
+  métal** (dégradé à bandes sombres / claires) qui glisse avec `--background-x/y`. Tous les éclairs reflètent la
+  même feuille : leur éclat varie de façon cohérente (noir → rouge → blanc). Une tache de lumière
+  (`--spot-x/y`, posée côté opposé à l'inclinaison) est intersectée avec le motif (`mask-composite: intersect`) ;
+  `--tilt-amt` et `--card-opacity` font tout disparaître à plat. Aucun dessin à chaque image (CSS pur ensuite).
+- Le masque du motif retire les musiciens (`images/masks`), et le logo, la pastille de rareté, le badge « Artiste »,
+  les PV et l'ATK (`collectHoles`, mesurés en `offsetLeft/Top`, recalculés au chargement du logo).
 
 ## Paramètres retenus
-- **Éclairs ultra rare** : quinconce 15×19 px, éclair ~9.5×14 px, palette rouge / gris / noir brillants
-  (en RGB, pas en HSL : l'interpolation de teinte passait par le violet), tache σ≈0.3, aucun pointillé sur
+- **Éclairs ultra rare** : quinconce 15×19 px, éclair ~9.5×14 px avec une facette atténuée (volume), feuille rouge /
+  gris / blanc / noir (stops en RGB), tache large (`--spot-r: 76%`, gain `0.25 + 0.75·smooth`), aucun pointillé sur
   les bordures.
-- **Éclairs rare** : tuiles plus grandes (30×36 px, éclair 17×25), tache **étroite** σ≈0.17, `gR = 0` à plat,
-  coupure `I < 0.1`, alpha ×0.42, mélange canvas `lighten` (garde le texte net). Palette métal
+- **Éclairs rare** : tuiles plus grandes (30×36 px, éclair 17×25), zone texte seulement, tache **étroite**
+  (`--spot-r: 37%`, nulle à plat), opacité ×0.78, `mix-blend-mode: lighten` (garde le texte net), feuille
   argent / acier / gunmetal.
 - **Relief légendaire** (`buildRelief` / `drawRelief`) : les musiciens sont découpés de la photo avec le
   masque `images/masks/<id>.png` (même cadrage `object-fit: cover` + `object-position` que la photo).
@@ -59,6 +65,8 @@ du flip d'apparition ; règles du cadre brossé dans la section « CADRE MÉTAL 
 - **Feuille de métal sous le texte des rares** (balayage argenté + grain) : créait une bande horizontale
   grise avec un bord net en haut quand on incline. Supprimée ; seuls les éclairs restent.
 - Éclairs sur les légendaires : retirés à la demande de l'utilisateur.
+- Éclairs dessinés un par un dans un canvas à chaque image (opacité propre à chaque éclair) : rendu « plat » et plus
+  lourd ; remplacés par le masque fixe + feuille réfléchissante (principe poke-holo `reverse-holo.css`).
 
 ## Pièges techniques
 - `.reveal-card` est en `preserve-3d` : `mix-blend-mode` n'y fusionne pas avec le contenu. Les couches sont
@@ -72,7 +80,7 @@ du flip d'apparition ; règles du cadre brossé dans la section « CADRE MÉTAL 
 Serveur local + Playwright (voir `CLAUDE.md`), viewport 420×860 : tenir le doigt appuyé, déplacer vers
 gauche / droite / haut / bas, vérifier que la lumière apparaît du côté opposé, qu'elle disparaît à plat et
 qu'aucune bande ne traverse la carte. Vérifié le 2026-11-04 sur les 21 légendaires (cadre brossé, relief présent,
-pas d'éclairs, aucun débordement de texte) et sur 4 ultra rares (éclairs, pas de relief). **Non testé** : performance sur téléphone réel, zoom depuis l'album
+pas d'éclairs, aucun débordement de texte) et sur 4 ultra rares (éclairs, pas de relief). **Non testé** : comportement de `mask-composite` sur Safari, performance sur téléphone réel, zoom depuis l'album
 (utilise aussi `buildRevealCard`), cartes sans masque en conditions réelles.
 
 ## À faire / ouvert
