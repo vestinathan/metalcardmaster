@@ -1,8 +1,8 @@
 # ADR-0003 : Effets holographiques des cartes, par rareté
 
 ## Statut
-**En cours — non validé, non commité** (2026-11-04). Itérations testées par l'utilisateur sur iPhone via
-un aperçu privé ; rien n'est poussé sur `main` tant qu'il n'a pas validé explicitement.
+**Validé et déployé** (2026-11-04). Itérations testées par l'utilisateur sur iPhone via un aperçu privé, puis commit
+et push sur `main` sur son feu vert explicite.
 
 ## Contexte
 Les cartes révélées à l'ouverture d'un paquet (`.reveal-card`) doivent réagir à l'inclinaison au doigt
@@ -76,8 +76,7 @@ pas d'éclairs, aucun débordement de texte) et sur 4 ultra rares (éclairs, pas
 (utilise aussi `buildRevealCard`), cartes sans masque en conditions réelles.
 
 ## À faire / ouvert
-- Validation par l'utilisateur, puis commit atomique (`index.html`, `images/masks/`, docs) ; décider du sort de
-  `holo-lab.html` (page de test isolée, remplacée par l'intégration).
+- `holo-lab.html` (page de test isolée, remplacée par l'intégration) est resté hors dépôt : à supprimer ou ignorer.
 - Les cartes en miniature de l'album (`.mini-card`) n'ont pas ces effets (seulement l'aperçu agrandi / la révélation).
 - Étendre éventuellement le relief aux ultra rares (elles ont déjà des masques).
 - Option évoquée, non demandée : poser le motif des rares *derrière* le texte.
