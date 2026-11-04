@@ -12,6 +12,8 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
   "Conventions de travail" ci-dessous.
 - **`images/bands/`** — photos/logos téléchargés une fois (TheAudioDB, repli Wikipedia),
   stockés localement. Pas d'appel réseau au runtime.
+- **`images/masks/`** — silhouettes PNG des musiciens (alpha), une par carte détourée ; servent aux
+  effets holographiques des cartes ultra rares / légendaires. Voir ADR-0003.
 - Pas de backend, pas de base de données, pas de clé API, pas de variable d'environnement.
 
 ## Modèle de données (tableau `CARDS` dans `index.html`)
