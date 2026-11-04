@@ -1374,7 +1374,7 @@ body::after {
 .reveal-card[data-holo] .rc-frame { isolation: isolate; }
 .reveal-card[data-rarity="legendaire"] .rc-holo-shine { opacity: calc(var(--card-opacity, 0) * 0.38); }
 .reveal-card[data-rarity="ultra_rare"] .rc-holo-shine { opacity: calc(var(--card-opacity, 0) * 0.32); }
-.rc-holo-shine, .rc-holo-glare, .rc-holo-glitter {
+.rc-holo-shine, .rc-holo-glare {
   position: absolute; inset: 0;
   border-radius: 16px;
   pointer-events: none;
@@ -1389,7 +1389,7 @@ body::after {
   filter: brightness(1.1) contrast(1.1) saturate(.7);
   opacity: var(--card-opacity, 0);
   /* dégradé acier uniquement : le grain de points et les paillettes sont dessinés dans le canvas
-     .rc-holo-glitter (orientés selon l'inclinaison, et recadrés à l'intérieur de la carte). */
+     .rc-holo-bolts (feuille réfléchissante vue à travers le motif d'éclairs). */
   background-image:
     repeating-linear-gradient( 110deg,
       hsl(212, 28%, 46%), hsl(220, 22%, 66%), hsl(208, 32%, 38%), hsl(224, 20%, 60%), hsl(214, 26%, 50%),
@@ -1400,12 +1400,42 @@ body::after {
     calc(((50% - var(--background-x, 50%)) * 2.6) + 50%) calc(((50% - var(--background-y, 50%)) * 3.5) + 50%);
   background-size: 400% 400%;
 }
-/* paillettes FIXES dans la carte : chaque éclat a une position figée et une "orientation" ; il ne
-   s'allume que quand l'inclinaison de la carte l'aligne avec la lumière (dessiné en canvas par
-   setupHolo). Même détourage que le reste de l'effet. */
-.rc-holo-glitter {
-  z-index: 24; width: 100%; height: 100%;
-  opacity: var(--card-opacity, 0);
+/* motif d'éclairs RÉFLÉCHISSANT (principe des cartes "reverse holo" de poke-holo) : le motif est un masque FIXE
+   (--bolts-mask, posé en JS), et derrière lui une feuille de métal (dégradé à bandes sombres / claires) qui
+   glisse avec l'inclinaison (--background-x/y) : chaque éclair passe du noir au rouge puis au blanc selon
+   l'angle, comme un vrai foil. Une tache de lumière (--spot-x/y, opposée à l'inclinaison) limite la zone
+   visible, et --tilt-amt / --card-opacity font tout disparaître à plat. Aucun dessin à chaque image. */
+.rc-holo-bolts {
+  position: absolute; z-index: 24; pointer-events: none;
+  border-radius: 16px;
+  --bolts-k: 1;
+  --spot-r: 76% 76%;
+  background-image: linear-gradient(115deg,
+    #2e0f13 0%, #b82c33 9%, #f6f8fb 17%, #7d838c 24%, #25262b 33%, #8f1a22 42%, #d7dce3 50%, #2a2b30 59%,
+    #b82c33 68%, #f3f5f9 76%, #6a707a 84%, #25262b 92%, #b82c33 100%);
+  background-size: 260% 260%;
+  background-position: calc(((50% - var(--background-x, 50%)) * 2.6) + 50%) calc(((50% - var(--background-y, 50%)) * 3.5) + 50%);
+  -webkit-mask-image:
+    radial-gradient(ellipse var(--spot-r) at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(0,0,0,1) 0%, rgba(0,0,0,.9) 25%, rgba(0,0,0,.6) 50%, rgba(0,0,0,.25) 75%, rgba(0,0,0,0) 100%),
+    var(--bolts-mask, none);
+  mask-image:
+    radial-gradient(ellipse var(--spot-r) at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(0,0,0,1) 0%, rgba(0,0,0,.9) 25%, rgba(0,0,0,.6) 50%, rgba(0,0,0,.25) 75%, rgba(0,0,0,0) 100%),
+    var(--bolts-mask, none);
+  -webkit-mask-size: 100% 100%, 100% 100%; mask-size: 100% 100%, 100% 100%;
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-composite: source-in; mask-composite: intersect;   /* tache de lumière ET motif */
+  opacity: calc(var(--card-opacity, 0) * var(--tilt-amt, 0) * var(--bolts-k));
+}
+/* rares : zone texte seulement, tache plus étroite, métal argent / acier, discret ; "lighten" garde le texte net */
+.reveal-card[data-holo="foil"] .rc-holo-bolts {
+  --bolts-k: 0.78;
+  --spot-r: 37% 37%;
+  mix-blend-mode: lighten;
+  background-image: linear-gradient(115deg,
+    #3a3e45 0%, #eef1f6 12%, #7c838d 22%, #23262b 33%, #cfd5dd 45%, #4a4f57 56%, #f4f6fa 67%, #6d737d 78%, #26292e 89%, #dde2e9 100%);
+  background-size: 300% 300%;
 }
 /* stries du métal brossé : calque en anneau posé AU-DESSUS du cadre (le fond du cadre est retraité par
    le filtre metallicss, qui gommerait des stries fines). */
@@ -1458,7 +1488,7 @@ body::after {
   position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0;
   filter: contrast(1.2) saturate(0.35) brightness(calc(0.92 + var(--card-opacity, 0) * 0.1));
 }
-@media (prefers-reduced-motion: reduce) { .rc-holo-shine, .rc-holo-glare, .rc-holo-glitter, .rc-holo-rim, .rc-holo-relief { display: none; } }
+@media (prefers-reduced-motion: reduce) { .rc-holo-shine, .rc-holo-glare, .rc-holo-bolts, .rc-holo-rim, .rc-holo-relief { display: none; } }
 
 /* flip d'apparition : au tap, la nouvelle carte entre en tournant sur elle-même (profil à 90°
    passant par une tranche quasi invisible, comme un vrai retournement de carte) plutôt que le
@@ -6698,11 +6728,9 @@ body::after {
     var glare = document.createElement("div");
     glare.className = "rc-holo-glare";
     var host = el.querySelector(".rc-frame") || el;
-    var glitter = document.createElement("canvas");
-    glitter.className = "rc-holo-glitter";
-    if (foilMode) glitter.style.mixBlendMode = "lighten";   // lighten : ne fait qu'éclaircir, le texte blanc reste net
-    else { host.appendChild(shine); host.appendChild(glare); }
-    if (boltsOn) host.appendChild(glitter);
+    var bolts = null;   // feuille réfléchissante vue à travers le motif d'éclairs (cf. .rc-holo-bolts)
+    if (!foilMode) { host.appendChild(shine); host.appendChild(glare); }
+    if (boltsOn) { bolts = document.createElement("div"); bolts.className = "rc-holo-bolts"; host.appendChild(bolts); }
     if (el.dataset.frame === "brushed") {
       var brushed = document.createElement("div");
       brushed.className = "rc-holo-brushed";
@@ -6765,7 +6793,7 @@ body::after {
       }
     }
     if (!foilMode) {   // le détourage ne concerne que les reflets pleine carte
-      loadHoloMask(card, function (im) { maskImg = im; drawMask(0); buildRelief(0); });
+      loadHoloMask(card, function (im) { maskImg = im; drawMask(0); buildRelief(0); buildBoltMask(); });
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { drawMask(0); });
     }
 
@@ -6778,7 +6806,24 @@ body::after {
     // Un éclat renvoie la lumière quand l'inclinaison courante est proche de son orientation :
     // intensité gaussienne de l'écart. En penchant la carte, d'autres éclats s'allument, les
     // précédents s'éteignent — mais aucun ne bouge.
-    var flakes = null, zone = null, gW = 0, gH = 0, gctx = null;
+    var flakes = null, zone = null, boxR = null, holes = [];
+    // zones où le motif ne doit jamais passer : logo, pastille de rareté, badge "Artiste", PV, ATK.
+    // Mesurées en offsetLeft/Top (ignore le tilt 3D) ; recalculées quand le logo finit de charger.
+    function collectHoles() {
+      var out = [], pad = 3;
+      [".rc-rarity-label", ".rc-type-label", ".rc-head-logo", ".rc-hp", ".rc-atk"].forEach(function (sel) {
+        var n = el.querySelector(sel);
+        if (!n || !n.offsetWidth || !n.offsetHeight) return;
+        var o = offsetIn(n, el), w = n.offsetWidth, h = n.offsetHeight;
+        if (sel === ".rc-head-logo" && n.naturalWidth && n.naturalHeight) {
+          w = Math.min(w, h * n.naturalWidth / n.naturalHeight);   // le logo est calé à gauche de sa boîte (object-fit: contain)
+        }
+        out.push({ x: o.x - pad, y: o.y - pad, w: w + 2 * pad, h: h + 2 * pad });
+      });
+      holes = out;
+    }
+    var logoElH = el.querySelector(".rc-head-logo");
+    if (logoElH && boltsOn) logoElH.addEventListener("load", function () { collectHoles(); buildBoltMask(); });
     function seedRand(str) {
       var h = 1779033703 ^ str.length;
       for (var i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
@@ -6789,10 +6834,6 @@ body::after {
       if (!boltsOn) return;
       var W = host.offsetWidth, H = host.offsetHeight;
       if (!W || !H) { if ((tries || 0) < 20) requestAnimationFrame(function () { buildGlitter((tries || 0) + 1); }); return; }
-      var dpr = Math.min(2, window.devicePixelRatio || 1);
-      glitter.width = Math.round(W * dpr); glitter.height = Math.round(H * dpr);
-      gW = W; gH = H; gctx = glitter.getContext("2d");
-      gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       if (!flakes && !foilMode) {
         // ultra rare / légendaire : motif d'éclairs en quinconce sur toute la carte (positions figées)
         var CW0 = 15, CH0 = 19, bw0 = 9.5, bh0 = 14;
@@ -6828,111 +6869,76 @@ body::after {
           }
         }
       }
-      drawGlitter();
+      // la couche couvre toute la carte (ultra rare) ou la seule zone texte (rare)
+      boxR = foilMode ? zone : { x: 0, y: 0, w: W, h: H };
+      bolts.style.left = boxR.x + "px"; bolts.style.top = boxR.y + "px";
+      bolts.style.width = boxR.w + "px"; bolts.style.height = boxR.h + "px";
+      collectHoles();
+      buildBoltMask();
+      updateBolts();
     }
     function smooth(a, b, x) { var t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); }
-    var grainPat = null;
-    function makeGrain(dpr) {
-      var t = document.createElement("canvas"); t.width = t.height = 5;
-      var g = t.getContext("2d");
-      g.fillStyle = "rgba(225,233,255,.42)";
-      g.beginPath(); g.arc(2.5, 2.5, .6, 0, 6.2832); g.fill();
-      var p = gctx.createPattern(t, "repeat");
-      if (p && p.setTransform && window.DOMMatrix) p.setTransform(new DOMMatrix([1 / dpr, 0, 0, 1 / dpr, 0, 0]));
-      return p;
+    // géométrie de la silhouette des musiciens dans la carte (même cadrage que la photo : object-fit cover + object-position)
+    function cutoutGeom() {
+      if (!maskImg) return null;
+      var img = el.querySelector(".rc-photo-img"), photo = el.querySelector(".rc-photo");
+      if (!img || !photo || !photo.offsetWidth) return null;
+      var po = offsetIn(photo, el), pw = photo.offsetWidth, ph = photo.offsetHeight;
+      var pos = (getComputedStyle(img).objectPosition || "50% 22%").split(" ");
+      var fx = parseFloat(pos[0]) / 100, fy = parseFloat(pos[1]) / 100;
+      if (isNaN(fx)) fx = 0.5;
+      if (isNaN(fy)) fy = 0.22;
+      var k = Math.max(pw / maskImg.naturalWidth, ph / maskImg.naturalHeight), dw = maskImg.naturalWidth * k, dh = maskImg.naturalHeight * k;
+      return { px: po.x, py: po.y, pw: pw, ph: ph, x: po.x + (pw - dw) * fx, y: po.y + (ph - dh) * fy, dw: dw, dh: dh };
     }
-    // palette cyclique (RGB, pour ne pas dériver par le violet) : rouge vif -> gris acier -> noir
-    // brillant -> rouge sombre -> argent -> rouge
-    var PAL = [[158, 34, 40], [112, 22, 30], [108, 113, 122], [16, 16, 19], [78, 18, 26], [150, 154, 161], [158, 34, 40]];
-    function pal(t) {
-      var x = t * (PAL.length - 1), i = Math.min(PAL.length - 2, Math.floor(x)), k = x - i, a = PAL[i], b = PAL[i + 1];
-      return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
-    }
-    // éclaircit (dl > 0, vers le blanc) ou assombrit (dl < 0, vers le noir) la couleur ; dl en -1..1
-    function hsl(c, dl, al) {
-      var d = dl / 60, t = d >= 0 ? 255 : 0, m = Math.min(1, Math.abs(d));
-      return "rgba(" + Math.round(c[0] + (t - c[0]) * m) + "," + Math.round(c[1] + (t - c[1]) * m) + "," +
-             Math.round(c[2] + (t - c[2]) * m) + "," + al.toFixed(2) + ")";
-    }
-    // palette métal (RGB) : argent clair -> acier -> gunmetal -> argent
-    var MPAL = [[214, 219, 226], [150, 158, 170], [98, 106, 118], [176, 182, 192], [236, 240, 246], [120, 128, 140], [214, 219, 226]];
-    function mhsl(t, al) {
-      var x = t * (MPAL.length - 1), i = Math.min(MPAL.length - 2, Math.floor(x)), k = x - i, a = MPAL[i], b = MPAL[i + 1];
-      return "rgba(" + Math.round(a[0] + (b[0] - a[0]) * k) + "," + Math.round(a[1] + (b[1] - a[1]) * k) + "," +
-             Math.round(a[2] + (b[2] - a[2]) * k) + "," + al.toFixed(2) + ")";
-    }
-    function drawGlitter() {
-      if (!boltsOn || !gctx || !flakes) return;
-      var dpr = Math.min(2, window.devicePixelRatio || 1);
-      gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      gctx.clearRect(0, 0, gW, gH);
-      var tx = (st.px / 50 - 1), ty = (st.py / 50 - 1);   // inclinaison courante, -1..1
-      var tl = Math.sqrt(tx * tx + ty * ty);
-      var m = smooth(0, 0.5, tl);                          // 0 carte à plat -> 1 bien inclinée
-      var gain = 0.25 + 0.75 * smooth(0, 0.6, tl);         // les éclats ne crépitent qu'en inclinant
-      // direction où la lumière accroche : côté OPPOSÉ à l'inclinaison (incliné à gauche -> visible à droite)
-      var vx = tl > 0.001 ? -tx / tl : 0, vy = tl > 0.001 ? -ty / tl : 0;
-      var R = Math.abs(vx) * gW / 2 + Math.abs(vy) * gH / 2 || 1;
-      function weight(x, y) {
-        var d = ((x - gW / 2) * vx + (y - gH / 2) * vy) / R;       // -1 (côté incliné) .. +1 (côté opposé)
-        return 0.6 + (smooth(-0.55, 0.9, d) - 0.6) * m;
-      }
-      if (!foilMode) {
-        // ultra rare / légendaire : halo de lumière côté opposé à l'inclinaison, motif rouge / gris / noir
-        gctx.save();
-        gctx.beginPath();
-        if (gctx.roundRect) gctx.roundRect(0, 0, gW, gH, 14 * gW / 300); else gctx.rect(0, 0, gW, gH);
-        gctx.clip();
-        var spx0 = 0.5 - tx * 0.5, spy0 = 0.5 - ty * 0.5, inv0 = 1 / (2 * 0.3 * 0.3), bks = {};
-        for (var j = 0; j < flakes.length; j++) {
-          var g0 = flakes[j], ux0 = g0.x / gW - spx0, uy0 = g0.y / gH - spy0;
-          var I0 = Math.exp(-(ux0 * ux0 + uy0 * uy0) * inv0) * gain;
-          if (I0 < 0.04) continue;
-          var pt0 = ((((g0.x / gW) * 0.8 + (g0.y / gH) * 0.5 + tx * 0.7 - ty * 0.45) % 1) + 1) % 1;
-          var ai0 = Math.min(4, Math.floor(Math.min(1, I0 * 1.25) * 5)), pi0 = Math.round(pt0 * 23), k3 = pi0 * 10 + ai0;
-          var b0 = bks[k3] || (bks[k3] = { path: new Path2D(), pt: pi0 / 23, al: (ai0 + 1) / 5 * 0.9 });
-          var q0 = g0.pts; b0.path.moveTo(q0[0], q0[1]);
-          for (var z0 = 2; z0 < q0.length; z0 += 2) b0.path.lineTo(q0[z0], q0[z0 + 1]);
-          b0.path.closePath();
+    // Masque FIXE du motif (calculé une fois, pas à chaque image) : les éclairs en alpha, avec une moitié
+    // légèrement atténuée pour un peu de volume, sans les musiciens ni le logo / pastilles / PV / ATK.
+    // La couleur ne vient pas d'ici : c'est la feuille réfléchissante de .rc-holo-bolts, vue à travers ce masque.
+    function buildBoltMask() {
+      if (!bolts || !flakes || !boxR) return;
+      try {
+        var S = 2, cv = document.createElement("canvas");
+        cv.width = Math.max(1, Math.round(boxR.w * S)); cv.height = Math.max(1, Math.round(boxR.h * S));
+        var g = cv.getContext("2d");
+        g.scale(S, S); g.translate(-boxR.x, -boxR.y);
+        var i, j, f, q;
+        g.fillStyle = "#000";
+        g.beginPath();
+        for (i = 0; i < flakes.length; i++) {
+          q = flakes[i].pts; g.moveTo(q[0], q[1]);
+          for (j = 2; j < q.length; j += 2) g.lineTo(q[j], q[j + 1]);
+          g.closePath();
         }
-        for (var k4 in bks) { gctx.fillStyle = hsl(pal(bks[k4].pt), 6, bks[k4].al); gctx.fill(bks[k4].path); }
-        gctx.restore();
-        return;
+        g.fill();
+        g.globalCompositeOperation = "destination-out";
+        g.globalAlpha = 0.4;   // facette : moitié haute-droite de chaque éclair atténuée
+        for (i = 0; i < flakes.length; i++) {
+          f = flakes[i]; q = f.pts;
+          g.save(); g.beginPath(); g.moveTo(q[0], q[1]);
+          for (j = 2; j < q.length; j += 2) g.lineTo(q[j], q[j + 1]);
+          g.closePath(); g.clip();
+          g.beginPath(); g.moveTo(f.x - 30, f.y - 30); g.lineTo(f.x + 30, f.y + 30); g.lineTo(f.x + 30, f.y - 30); g.closePath(); g.fill();
+          g.restore();
+        }
+        g.globalAlpha = 1;
+        for (i = 0; i < holes.length; i++) g.fillRect(holes[i].x, holes[i].y, holes[i].w, holes[i].h);
+        if (!foilMode) {
+          var cg = cutoutGeom();
+          if (cg) { g.save(); g.beginPath(); g.rect(cg.px, cg.py, cg.pw, cg.ph); g.clip(); g.drawImage(maskImg, cg.x, cg.y, cg.dw, cg.dh); g.restore(); }
+        }
+        bolts.style.setProperty("--bolts-mask", 'url("' + cv.toDataURL("image/png") + '")');
+      } catch (err) {
+        // canvas indisponible : pas de motif
       }
-      // rare : motif dans la zone texte uniquement
-      gctx.save();
-      gctx.beginPath();
-      gctx.rect(zone.x, zone.y, zone.w, zone.h);   // le motif reste dans la zone texte
-      gctx.clip();
-      // Lumière : un halo posé du côté OPPOSÉ à l'inclinaison (incliné à gauche -> ça accroche à droite),
-      // exprimé dans le repère de la zone texte ; le motif s'allume dans le halo et s'estompe autour.
-      // Métal : argent / acier / gunmetal, par bandes diagonales qui glissent avec l'inclinaison.
-      var spx = 0.5 - tx * 0.6, spy = 0.5 - ty * 0.6, inv = 1 / (2 * 0.17 * 0.17), gR = smooth(0.05, 0.5, tl);   // tache de lumière étroite ; rien à plat
-      var buckets = {}, shadow = new Path2D();
-      for (var i = 0; i < flakes.length; i++) {
-        var f = flakes[i], zx = (f.x - zone.x) / zone.w, zy = (f.y - zone.y) / zone.h;
-        var ux = zx - spx, uy = zy - spy;
-        var I = Math.exp(-(ux * ux + uy * uy) * inv) * gR;
-        if (I < 0.1) continue;
-        var pt = (((zx * 0.9 + zy * 0.6 + tx * 0.8 - ty * 0.5) % 1) + 1) % 1;
-        var ai = Math.min(4, Math.floor(Math.min(1, I * 1.2) * 5)), pi = Math.round(pt * 15);
-        var key = pi * 10 + ai;
-        var bk = buckets[key] || (buckets[key] = { path: new Path2D(), pt: pi / 15, al: (ai + 1) / 5 * 0.42 });
-        var pp = f.pts, p = bk.path;
-        p.moveTo(pp[0], pp[1]);
-        shadow.moveTo(pp[0] + 1.1, pp[1] + 1.3);
-        for (var q = 2; q < pp.length; q += 2) { p.lineTo(pp[q], pp[q + 1]); shadow.lineTo(pp[q] + 1.1, pp[q + 1] + 1.3); }
-        p.closePath(); shadow.closePath();
-      }
-      gctx.fillStyle = "rgba(0,0,0,.25)"; gctx.fill(shadow);          // léger relief : ombre portée du motif
-      gctx.lineWidth = 0.6; gctx.lineJoin = "miter";
-      for (var key2 in buckets) {
-        var B = buckets[key2];
-        gctx.fillStyle = mhsl(B.pt, B.al);
-        gctx.strokeStyle = "rgba(255,255,255," + (B.al * 0.35).toFixed(2) + ")";
-        gctx.fill(B.path); gctx.stroke(B.path);
-      }
-      gctx.restore();
+    }
+    // Lumière : une tache posée du côté OPPOSÉ à l'inclinaison (incliné à gauche -> ça accroche à droite),
+    // dans le repère de la couche ; la feuille réfléchissante, elle, glisse avec --background-x/y (cf. CSS).
+    function updateBolts() {
+      if (!bolts) return;
+      var tx = st.px / 50 - 1, ty = st.py / 50 - 1, tl = Math.sqrt(tx * tx + ty * ty), k = foilMode ? 0.6 : 0.5;
+      el.style.setProperty("--spot-x", ((0.5 - tx * k) * 100).toFixed(1) + "%");
+      el.style.setProperty("--spot-y", ((0.5 - ty * k) * 100).toFixed(1) + "%");
+      el.style.setProperty("--tilt-amt", (foilMode ? smooth(0.05, 0.5, tl) : 0.25 + 0.75 * smooth(0, 0.6, tl)).toFixed(3));   // rien à plat
     }
     // --- relief des membres détourés (légendaire) : les musiciens sont découpés de la photo (silhouette =
     // masque images/masks/<id>.png) et posés sur un calque d'avant-plan. À l'inclinaison, ce calque se
@@ -7015,7 +7021,7 @@ body::after {
       el.style.setProperty("--background-x", st.bx.toFixed(2) + "%");
       el.style.setProperty("--background-y", st.by.toFixed(2) + "%");
       el.style.setProperty("--card-opacity", st.op.toFixed(3));
-      drawGlitter();
+      updateBolts();
       drawRelief();
       if (moving) raf = requestAnimationFrame(frame);
     }
