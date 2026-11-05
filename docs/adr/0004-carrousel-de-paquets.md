@@ -1,8 +1,7 @@
 # ADR-0004 : Carrousel de paquets et déchirure à l'ouverture
 
 ## Statut
-**Intégré, en attente de validation sur iPhone** (2026-11-05). Les maquettes ont été validées par l'utilisateur sur des
-aperçus privés ; l'intégration n'est ni commitée ni poussée tant qu'il n'a pas donné son feu vert.
+**Validé et déployé** (2026-11-05). Les maquettes puis l'aperçu intégré ont été validés par l'utilisateur sur iPhone ; poussé sur `main`.
 
 ## Contexte
 La vue Paquets affichait une étagère avec un seul paquet (image à plat, `images/packs/metalcardmaster-pack.webp`),
