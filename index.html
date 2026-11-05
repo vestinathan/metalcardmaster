@@ -1987,6 +1987,20 @@ body::after {
 }
 .close-opening[hidden] { display: none; }
 
+/* bouton son (haut-parleur) : vue Paquets + écran d'ouverture */
+#view-packs { position: relative; }
+.sfx-btn {
+  width: 40px; height: 40px; border-radius: 50%; padding: 0; z-index: 130; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(22,21,18,.82); color: var(--ink); border: 1px solid var(--line-bright);
+}
+.sfx-btn.in-view { position: absolute; top: 10px; right: max(14px, env(safe-area-inset-right, 0px)); z-index: 5; }
+.sfx-btn.in-opening { position: fixed; top: max(14px, env(safe-area-inset-top, 0px)); left: max(14px, env(safe-area-inset-left, 0px)); }
+.sfx-btn .sfx-slash { display: none; }
+.sfx-btn[aria-pressed="false"] { color: var(--ink-dim); }
+.sfx-btn[aria-pressed="false"] .sfx-slash { display: block; }
+.sfx-btn[aria-pressed="false"] .sfx-wave { display: none; }
+
 /* ==========================================================================
    FIN DE PAQUET — badge « Nouvelle carte » / doublon sur chaque carte, puis récap des 5 cartes
    (ADR-0005). Tout est posé HORS des .reveal-card (jamais de canvas en plus) : pastille unique dans
@@ -2165,6 +2179,7 @@ body::after {
 
   <!-- ===== VUE PAQUETS ===== -->
   <main class="view" id="view-packs" hidden>
+    <button type="button" class="sfx-btn in-view" aria-pressed="true" aria-label="Couper le son"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="sfx-wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="sfx-slash" d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     <div class="pk-carousel" id="pkCarousel">
       <div class="pk-stage" id="pkStage" tabindex="0" role="group" aria-label="Choisir un paquet (flèches gauche et droite)"><div class="pk-ring" id="pkRing"></div></div>
       <div class="pk-meta">
@@ -2326,6 +2341,7 @@ body::after {
 
 <!-- ===== SÉQUENCE D'OUVERTURE ===== -->
 <section class="opening" id="opening" hidden>
+  <button type="button" class="sfx-btn in-opening" aria-pressed="true" aria-label="Couper le son"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path class="sfx-wave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="sfx-slash" d="M4 4l16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
   <div class="stage" id="stage">
     <div class="tear-flash" id="tearFlash"></div>
     <!-- reveal-cards injectées en JS -->
@@ -2352,6 +2368,191 @@ body::after {
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
+<script>
+/* ==========================================================================
+   SONS — 100 % synthétisés avec Web Audio (aucun fichier audio, aucun appel réseau : ADR-0001).
+   window.MCMSfx.{tick, tear, swipe, reveal, setEnabled, enabled}. Cinq moments seulement : carrousel, déchirure, carte qui apparaît, swipe, légendaire.
+   Désactivable (bouton haut-parleur, mémorisé dans localStorage "mcm-sound"). Sur iOS le contexte audio ne démarre
+   qu'après un geste (déverrouillé au premier pointerdown) et l'interrupteur « sonnerie » de l'iPhone coupe le son web.
+   ========================================================================== */
+(function () {
+  "use strict";
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var ctx = null, master = null, out = null, noiseBuf = null, on = true, distCurve = null;
+  try { on = localStorage.getItem("mcm-sound") !== "off"; } catch (e) {}
+
+  function ensure() {
+    if (!AC) return null;
+    if (!ctx) {
+      try {
+        ctx = new AC();
+        var comp = ctx.createDynamicsCompressor();
+        comp.threshold.value = -16; comp.ratio.value = 5; comp.attack.value = 0.003; comp.release.value = 0.25;
+        master = ctx.createGain(); master.gain.value = 0.9;
+        master.connect(comp); comp.connect(ctx.destination);
+        var len = Math.floor(ctx.sampleRate * 1.6), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+        for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        noiseBuf = b;
+      } catch (e) { ctx = null; return null; }
+    }
+    if (ctx.state === "suspended") { try { ctx.resume(); } catch (e) {} }
+    return ctx;
+  }
+  function ok() { return on && !document.hidden && ensure(); }
+  function now() { return ctx.currentTime + 0.01; }
+
+  // oscillateur avec enveloppe (attaque rapide, décroissance exponentielle), glissando et filtre passe-bas optionnels
+  function tone(f, t, d, o) {
+    o = o || {};
+    var osc = ctx.createOscillator(), g = ctx.createGain(), node = osc;
+    osc.type = o.type || "sine";
+    osc.frequency.setValueAtTime(f, t);
+    if (o.f2) osc.frequency.exponentialRampToValueAtTime(o.f2, t + d);
+    if (o.detune) osc.detune.value = o.detune;
+    if (o.lp) { var l = ctx.createBiquadFilter(); l.type = "lowpass"; l.frequency.value = o.lp; node.connect(l); node = l; }
+    if (o.shape) { var w = ctx.createWaveShaper(); w.curve = o.shape; w.oversample = "2x"; node.connect(w); node = w; }
+    if (o.lp2) { var l2 = ctx.createBiquadFilter(); l2.type = "lowpass"; l2.frequency.value = o.lp2; l2.Q.value = 0.8; node.connect(l2); node = l2; }
+    if (o.vib) {   // vibrato : un oscillateur lent module la fréquence (larsen de guitare)
+      var lfo = ctx.createOscillator(), lg = ctx.createGain();
+      lfo.frequency.value = o.vib[0]; lg.gain.value = o.vib[1];
+      lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t); lfo.stop(t + d + 0.05);
+    }
+    node.connect(g);
+    var a = o.a || 0.005, pk = o.g || 0.3;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(pk, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    g.connect(out || master);
+    osc.start(t); osc.stop(t + d + 0.05);
+  }
+  // bruit filtré (bande, passe-haut, passe-bas) avec balayage de fréquence ; o.curve = enveloppe personnalisée (déchirure)
+  function noise(t, d, o) {
+    o = o || {};
+    var src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = noiseBuf; src.loop = true;
+    f.type = o.type || "bandpass"; f.Q.value = o.q || 1;
+    f.frequency.setValueAtTime(o.f0 || 1000, t);
+    if (o.f1) f.frequency.exponentialRampToValueAtTime(o.f1, t + d);
+    var a = o.a || 0.004, pk = o.g || 0.3;
+    if (o.curve) {
+      g.gain.setValueCurveAtTime(o.curve, t, d);
+    } else {
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(pk, t + a);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    }
+    src.connect(f); f.connect(g); g.connect(out || master);
+    src.start(t, Math.random() * 0.4); src.stop(t + d + 0.05);
+  }
+  var distCurves = {};
+  function dist(k) {   // saturation (tanh) : plus k est grand, plus c'est écrasé / agressif
+    k = k || 6;
+    if (!distCurves[k]) {
+      var c = new Float32Array(2048);
+      for (var i = 0; i < 2048; i++) { var x = i / 1024 - 1; c[i] = Math.tanh(x * k); }
+      distCurves[k] = c;
+    }
+    return distCurves[k];
+  }
+  // éléments de batterie / guitare du reveal légendaire
+  function kick(t, g) { tone(150, t, 0.14, { f2: 42, g: g, a: 0.002 }); noise(t, 0.02, { type: "highpass", f0: 3000, g: g * 0.35, a: 0.001 }); }
+  function snare(t, g) { noise(t, 0.22, { type: "bandpass", f0: 1800, q: 0.6, g: g, a: 0.002 }); tone(210, t, 0.12, { f2: 140, g: g * 0.8, a: 0.002 }); }
+  function crash(t, d, g) { noise(t, d, { type: "highpass", f0: 5200, f1: 8200, g: g, a: 0.003 }); noise(t, d * 0.6, { type: "bandpass", f0: 3600, q: 0.5, g: g * 0.6, a: 0.003 }); }
+  // accord de puissance saturé (fondamentale + quinte + octave, scie légèrement désaccordée, ampli + baffle simulés)
+  function chord(t, fs, d, g) {
+    fs.forEach(function (f, i) {
+      tone(f, t, d, { type: "sawtooth", g: g, lp: 3000, shape: dist(16), lp2: 3600, detune: (i % 2 ? 7 : -7), a: 0.003 });
+      tone(f * 1.003, t, d, { type: "square", g: g * 0.6, lp: 2400, shape: dist(16), lp2: 3200, detune: (i % 2 ? -5 : 5), a: 0.003 });
+    });
+  }
+  function chug(t, f, g) { chord(t, [f, f * 1.5], 0.16, g); noise(t, 0.04, { type: "lowpass", f0: 500, g: g * 0.8, a: 0.002 }); }
+  function thump(t, g, f) { tone(f || 120, t, 0.24, { f2: 42, g: g || 0.5 }); noise(t, 0.05, { type: "lowpass", f0: 900, g: (g || 0.5) * 0.35 }); }
+
+  var S = {
+    // cran du carrousel : un autre paquet passe devant (petit claquement sec + choc sourd)
+    tick: function () {
+      if (!ok()) return; var t = now();
+      tone(1900, t, 0.04, { type: "square", g: 0.09, lp: 4200 }); noise(t, 0.03, { type: "highpass", f0: 5500, g: 0.12 }); thump(t, 0.3, 200);
+    },
+    // déchirure du paquet : bruit qui balaie du grave à l'aigu (enveloppe en dents de scie), craquements, choc, puis le haut
+    // qui s'envole
+    tear: function () {
+      if (!ok()) return; var t = now(), n = 30, curve = new Float32Array(n), d = 0.4;
+      for (var i = 0; i < n; i++) { var k = i / (n - 1); curve[i] = (0.2 + 0.7 * Math.sin(Math.PI * Math.min(1, k * 1.4))) * (0.55 + 0.45 * Math.random()) * (k > 0.92 ? (1 - k) * 12 : 1); }
+      noise(t, d, { type: "bandpass", f0: 600, f1: 5200, q: 0.9, curve: curve });
+      noise(t, d, { type: "highpass", f0: 3500, g: 0.08, a: 0.1 });
+      for (var j = 0; j < 18; j++) noise(t + Math.random() * d, 0.02, { type: "highpass", f0: 3000 + Math.random() * 4000, g: 0.12 });
+      thump(t + 0.02, 0.55, 140);
+      noise(t + 0.3, 0.5, { type: "bandpass", f0: 400, f1: 3600, q: 0.8, g: 0.3, a: 0.15 });
+      tone(240, t + 0.3, 0.45, { type: "triangle", f2: 900, g: 0.09, a: 0.12 });
+    },
+    // swipe d'une carte : petit souffle rapide qui part du geste
+    swipe: function () {
+      if (!ok()) return; var t = now();
+      noise(t, 0.2, { type: "bandpass", f0: 1400, f1: 4200, q: 1.1, g: 0.4, a: 0.05 });
+      tone(420, t, 0.16, { type: "triangle", f2: 760, g: 0.14, a: 0.04 });
+    },
+    // une carte apparaît : souffle du flip puis choc à l'atterrissage. Légendaire : montée pendant la fumée (2 s) puis impact.
+    reveal: function (rarity) {
+      if (!ok()) return; var t = now();
+      if (rarity !== "legendaire") {
+        noise(t, 0.34, { type: "bandpass", f0: 500, f1: 2400, q: 0.9, g: 0.15, a: 0.13 });
+        thump(t + 0.46, 0.36, 100);
+        return;
+      }
+      // bus dédié : toutes les couches saturées s'additionnent, on les ramène à un niveau cohérent avec les autres sons
+      var bus = ctx.createGain(); bus.gain.value = 0.55; bus.connect(master); out = bus;
+      // 0 → 1,5 s (fumée) : grosse caisse en double pédale qui s'emballe, gronde grave, cymbale inversée, larsen de guitare
+      var tt = 0, step = 0.15, ki = 0;
+      while (tt < 1.46) { kick(t + tt, 0.22 + 0.3 * (tt / 1.5)); tt += step; step = Math.max(0.055, step * 0.93); ki++; }
+      noise(t, 1.9, { type: "lowpass", f0: 100, f1: 200, g: 0.34, a: 0.2 });
+      tone(41.2, t, 1.5, { type: "sawtooth", g: 0.22, lp: 220, shape: dist(8), a: 0.6 });
+      noise(t + 0.2, 1.3, { type: "highpass", f0: 2500, f1: 9000, g: 0.2, a: 1.15 });
+      tone(659.3, t + 0.7, 0.8, { type: "sine", f2: 740, g: 0.1, shape: dist(10), vib: [6, 9], a: 0.5 });
+      // 1,5 s : l'impact — caisse claire, crash, accord de puissance en mi saturé, sub
+      var h = t + 1.5;
+      kick(h, 0.7); snare(h, 0.45); crash(h, 2.0, 0.34);
+      tone(41.2, h, 1.8, { f2: 36, g: 0.7 });
+      chord(h, [82.4, 123.5, 164.8], 1.5, 0.13);
+      // …puis trois « chugs » étouffés, comme un riff qui démarre
+      chug(h + 0.62, 82.4, 0.15); chug(h + 0.8, 82.4, 0.15); chug(h + 0.98, 98, 0.15);
+      kick(h + 0.62, 0.4); kick(h + 0.8, 0.4); kick(h + 0.98, 0.4);
+      out = null;
+    },
+    setEnabled: function (v) {
+      on = !!v;
+      try { localStorage.setItem("mcm-sound", on ? "on" : "off"); } catch (e) {}
+      syncButtons();
+      if (on) S.tick();
+    },
+    enabled: function () { return on; }
+  };
+  window.MCMSfx = S;
+
+  // iOS / Safari : le contexte ne démarre qu'après un geste. On le déverrouille au premier toucher, puis on le
+  // suspend quand l'onglet est caché (et on le relance au retour).
+  function unlock() {
+    if (!on || !ensure()) return;
+    try { var b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource(); s.buffer = b; s.connect(ctx.destination); s.start(0); } catch (e) {}
+  }
+  document.addEventListener("pointerdown", unlock, { passive: true });
+  document.addEventListener("touchend", unlock, { passive: true });
+  document.addEventListener("visibilitychange", function () {
+    if (!ctx) return;
+    try { if (document.hidden) ctx.suspend(); else if (on) ctx.resume(); } catch (e) {}
+  });
+
+  // boutons haut-parleur (vue Paquets + écran d'ouverture)
+  function syncButtons() {
+    document.querySelectorAll(".sfx-btn").forEach(function (b) { b.setAttribute("aria-pressed", on ? "true" : "false"); b.setAttribute("aria-label", on ? "Couper le son" : "Activer le son"); });
+  }
+  document.querySelectorAll(".sfx-btn").forEach(function (b) {
+    b.addEventListener("click", function (ev) { ev.stopPropagation(); S.setEnabled(!on); });
+    b.addEventListener("pointerdown", function (ev) { ev.stopPropagation(); });
+  });
+  syncButtons();
+})();
+</script>
 <script>
 (function () {
   "use strict";
@@ -6270,7 +6471,7 @@ body::after {
     if (!pkDragging && Math.abs(pkTarget - pkCur) < 0.01) pkCur = pkTarget;
     pkStage.style.setProperty("--ring", pkCur.toFixed(3));
     var idx = ((Math.round(-pkCur / PK_STEP) % PK_N) + PK_N) % PK_N;
-    if (idx !== pkActive) { pkActive = idx; updatePackMeta(); }
+    if (idx !== pkActive) { pkActive = idx; updatePackMeta(); sfx("tick"); }
     var speed = pkDragging ? pkVel : (pkTarget - pkCur) * 0.02;
     for (var i = 0; i < PK_N; i++) {
       var rel = pkWrap(i * PK_STEP + pkCur);
@@ -6383,6 +6584,7 @@ body::after {
     pkStage.classList.add("opened");
     pack.classList.remove("shaking");
     pack.classList.add("tearing", "flashing");
+    sfx("tear");
     setTimeout(function () { pack.classList.add("risen"); }, 360);
     setTimeout(function () {
       opening.hidden = false;
@@ -6433,6 +6635,7 @@ body::after {
     // @keyframes animation ici.
     requestAnimationFrame(function () {
       el.classList.add("showing", "flipping");
+      sfx("reveal", card.rarity);
       if (direction === "next") el.classList.add("flip-from-right");
       else if (direction === "prev") el.classList.add("flip-from-left");
       // Légendaire : tremblement d'écran posé sur .stage (pas sur la carte, pour ne pas interférer
@@ -6480,6 +6683,8 @@ body::after {
   var tapHintDefault = tapHint.textContent;
   var RECAP_HINT = "Toucher pour voir le récap du paquet";
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function sfx(name, a, b) { var S = window.MCMSfx; if (S && S[name]) S[name](a, b); }
 
   function computePullInfo() {
     var seen = {};
@@ -7232,8 +7437,10 @@ body::after {
         (onTap || nextCard)();
       } else if (Math.abs(deltaX) > 80 && deltaY < Math.abs(deltaX) / 2) {
         if (deltaX < -80 && pullIndex < pullQueue.length - 1) {
+          sfx("swipe");
           nextCard();
         } else if (deltaX > 80 && pullIndex > 0) {
+          sfx("swipe");
           prevCard();
         }
       }

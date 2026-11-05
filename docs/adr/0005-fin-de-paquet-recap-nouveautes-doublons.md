@@ -1,7 +1,7 @@
 # ADR-0005 : Fin de paquet — badge « New » et récap des cartes
 
 ## Statut
-**Aperçu, en attente de validation sur iPhone** (2026-11-05). Non poussé tant que l'utilisateur n'a pas donné son feu vert.
+**Validé et déployé** (2026-11-05), après essais sur iPhone.
 
 ## Contexte
 La révélation s'arrêtait sur la dernière carte avec un simple bouton « Retour à l'album ». Rien n'indiquait si une carte

@@ -16,6 +16,7 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
   effets holographiques des cartes ultra rares / légendaires. Voir ADR-0003.
 - **`images/packs/`** — packshots des paquets (bases réalistes en `.webp`), photo de la fenêtre et silhouette du
   logo ; servent au carrousel de paquets de la vue Paquets (éditions listées dans `PACK_EDITIONS`). Voir ADR-0004.
+- **Sons** — synthétisés avec Web Audio dans `index.html` (`window.MCMSfx`), aucun fichier audio. Voir ADR-0006.
 - Pas de backend, pas de base de données, pas de clé API, pas de variable d'environnement.
 
 ## Modèle de données (tableau `CARDS` dans `index.html`)
