@@ -6,7 +6,7 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
 
 ## Architecture
 
-- **`index.html`** — l'app entière : HTML + CSS + JS dans un seul fichier (~460 Ko). Pas de
+- **`index.html`** — l'app entière : HTML + CSS + JS dans un seul fichier (~720 Ko). Pas de
   build step, pas de framework. C'est un choix délibéré pour la simplicité de déploiement,
   mais ça veut dire que le fichier est gros et que les diffs peuvent être bruyants — voir
   "Conventions de travail" ci-dessous.
@@ -14,6 +14,8 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
   stockés localement. Pas d'appel réseau au runtime.
 - **`images/masks/`** — silhouettes PNG des musiciens (alpha), une par carte détourée ; servent aux
   effets holographiques des cartes ultra rares / légendaires. Voir ADR-0003.
+- **`images/packs/`** — packshots des paquets (bases réalistes en `.webp`), photo de la fenêtre et silhouette du
+  logo ; servent au carrousel de paquets de la vue Paquets (éditions listées dans `PACK_EDITIONS`). Voir ADR-0004.
 - Pas de backend, pas de base de données, pas de clé API, pas de variable d'environnement.
 
 ## Modèle de données (tableau `CARDS` dans `index.html`)
@@ -39,7 +41,7 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
 1. **`influence` par carte** — doit refléter l'influence réelle de l'artiste/groupe dans le
    monde, de façon cohérente et reproductible. **Ne jamais l'ajuster pour équilibrer la
    distribution des packs.** Voir ADR-0002.
-2. **`RARITY_DROP_WEIGHTS`** (ligne ~3181) et **`GUARANTEED_SLOT_RARITIES`** (ligne ~3182) —
+2. **`RARITY_DROP_WEIGHTS`** (~ligne 5880) et **`GUARANTEED_SLOT_RARITIES`** (~ligne 5881) —
    seul endroit où la distribution de rareté dans les packs doit être ajustée.
    `PACK_SIZE = 5`.
 
