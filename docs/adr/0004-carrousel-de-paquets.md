@@ -11,7 +11,7 @@ tirage ni le stock serveur.
 
 ## Décision
 - **Carrousel 3D en CSS pur** (`.pk-stage` / `.pk-ring` / `.pk-slot`) : glisser avec inertie et calage sur le paquet le
-  plus proche, tap sur un paquet de côté pour l'amener devant, points et flèches clavier. Pas de WebGL ni de build
+  plus proche, tap sur un paquet de côté pour l'amener devant, **tap sur le paquet de face pour l'ouvrir** (mêmes garde-fous que le bouton : verrouillé, épuisé, occupé), points et flèches clavier. Pas de WebGL ni de build
   (ADR-0001). Un dépôt de référence (`qbaok62/gacha-card-game`, React + three.js) a été examiné et écarté : ~270 lignes de
   prototype (anneau de plans rouges), aucune logique de cartes, et une chaîne de build incompatible avec l'ADR-0001.
   Seule l'idée « anneau + inertie + calage » est reprise.

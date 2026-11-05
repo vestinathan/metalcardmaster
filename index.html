@@ -1987,6 +1987,70 @@ body::after {
 }
 .close-opening[hidden] { display: none; }
 
+/* ==========================================================================
+   FIN DE PAQUET — badge « Nouvelle carte » / doublon sur chaque carte, puis récap des 5 cartes
+   (ADR-0005). Tout est posé HORS des .reveal-card (jamais de canvas en plus) : pastille unique dans
+   .stage, tuiles légères (photo + nom) dans l'éventail.
+   ========================================================================== */
+.rv-tag {
+  position: absolute; right: -9px; top: -13px; z-index: 30; pointer-events: none;
+  display: inline-flex; align-items: center; white-space: nowrap;
+  font-family: var(--font-label); font-size: 19px; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1;
+  padding: 7px 12px 6px; border-radius: 999px;
+  transform: rotate(8deg) scale(.5); opacity: 0;
+}
+.rv-tag.show { opacity: 1; transform: rotate(8deg) scale(1); animation: rvTagIn .5s cubic-bezier(.2,1.5,.4,1) both; }
+.rv-tag.is-new { background: var(--accent); color: var(--ink-on-accent); box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset, 0 4px 18px rgba(255,90,31,.6); }
+.rv-tag.is-new::after {
+  content: ""; position: absolute; inset: -2px; border-radius: inherit; border: 2px solid var(--accent); opacity: 0;
+}
+.rv-tag.is-new.show::after { animation: rvRing .9s ease-out .15s both; }
+@keyframes rvTagIn { 0% { opacity: 0; transform: rotate(-6deg) translateY(-10px) scale(.4); } 100% { opacity: 1; transform: rotate(8deg) translateY(0) scale(1); } }
+@keyframes rvRing { 0% { opacity: .9; transform: scale(1); } 100% { opacity: 0; transform: scale(1.8, 2.3); } }
+
+/* fondu de la dernière carte vers le récap */
+.opening.recap-mode .stage { opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+.opening.recap-mode .opening-progress { display: none; }
+.opening.recap-mode .close-opening { border-color: var(--accent); color: var(--ink); }
+
+.pk-recap { display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; max-width: 380px; }
+/* le récap peut dépasser la hauteur d'un petit écran : l'écran défile au lieu de couper le bouton de sortie */
+.opening.recap-mode { overflow-y: auto; justify-content: flex-start; -webkit-overflow-scrolling: touch; }
+.opening.recap-mode > .pk-recap { margin-top: auto; }
+.opening.recap-mode > .close-opening { margin-bottom: auto; flex: none; }
+.rcp-x {
+  position: fixed; z-index: 120; top: max(14px, env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px));
+  width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-body); font-size: 18px; line-height: 1; cursor: pointer;
+  background: rgba(22,21,18,.9); color: var(--ink); border: 1px solid var(--line-bright);
+  animation: rcpFade .5s ease .4s both;
+}
+.rcp-title { font-family: var(--font-display); font-size: 24px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); animation: rcpFade .5s ease both; }
+/* de vraies cartes du jeu (buildRevealCard), réduites : 300 px de large réduits à --tw par un scale posé en JS */
+.rcp-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 10px; width: 100%; }
+.rcp-tile {
+  position: relative; width: var(--tw); aspect-ratio: 5 / 7; flex: none;
+  transform: rotate(var(--r, 0deg));
+  animation: rcpDeal .62s cubic-bezier(.2,.9,.3,1.15) calc(var(--i) * .13s + .1s) both;
+}
+.rcp-tile[data-rarity="ultra_rare"] { filter: drop-shadow(0 0 7px rgba(255,90,31,.5)); }
+.rcp-tile[data-rarity="legendaire"] { filter: drop-shadow(0 0 9px rgba(255,182,39,.65)); }
+.rcp-card { position: absolute; left: 0; top: 0; width: 300px; height: 420px; transform: scale(var(--sc, .36)); transform-origin: 0 0; pointer-events: none; }
+/* récap statique : les reflets qui tournent en continu sont mis en pause (5 cartes complètes à l'écran) */
+.rcp-card *, .rcp-card *::before, .rcp-card *::after { animation-play-state: paused !important; }
+.rcp-tag {
+  position: absolute; top: -9px; left: -7px; z-index: 5; display: inline-flex; align-items: center;
+  font-family: var(--font-label); font-size: 13px; letter-spacing: .06em; line-height: 1; padding: 4px 8px 3px; border-radius: 999px;
+  transform-origin: 0 100%; animation: rcpTag .45s cubic-bezier(.2,1.6,.4,1) calc(var(--i) * .13s + .85s) both;
+}
+.rcp-tag.is-new { background: var(--accent); color: var(--ink-on-accent); box-shadow: 0 2px 10px rgba(255,90,31,.6); }
+@keyframes rcpDeal { from { opacity: 0; transform: translateY(70px) rotate(0deg) scale(.55); } }
+@keyframes rcpTag { from { opacity: 0; transform: scale(.3); } }
+@keyframes rcpFade { from { opacity: 0; transform: translateY(6px); } }
+@media (prefers-reduced-motion: reduce) {
+  .rv-tag, .rv-tag::after, .pk-recap * { animation: none !important; transition: none !important; }
+}
+
 /* Paire "Retour à la collection" / "Valider" affichée à la place de .close-opening quand le
    card-zoom est ouvert depuis le picker de carte à échanger (cf. openCardZoom). Réutilise
    .account-btn (mêmes styles que le formulaire d'échange) plutôt que .close-opening, pour que
@@ -6172,10 +6236,17 @@ body::after {
     pkLastX = ev.clientX; pkLastT = now;
     if (pkMoved) pkTarget = pkStartRing + dx * PK_K;
   });
-  function pkEndDrag() {
+  function pkEndDrag(ev) {
     if (!pkDragging) return;
     pkDragging = false; pkStage.classList.remove("dragging");
-    if (!pkMoved) { pkGoTo(pkDownSlot ? +pkDownSlot.dataset.i : pkActive); return; }
+    if (!pkMoved) {
+      var tapped = pkDownSlot ? +pkDownSlot.dataset.i : pkActive;
+      // toucher le paquet de face l'ouvre (comme le bouton, mêmes garde-fous : verrouillé / épuisé / occupé) ;
+      // toucher un paquet de côté le ramène devant
+      if (pkDownSlot && tapped === pkActive && ev && ev.type === "pointerup" && !pkBusy && !pkIsOff(PACK_EDITIONS[tapped])) { pkOpen.click(); return; }
+      pkGoTo(tapped);
+      return;
+    }
     var projected = pkTarget + pkClamp(pkVel * 220, -PK_STEP * 1.6, PK_STEP * 1.6);
     pkTarget = Math.round(projected / PK_STEP) * PK_STEP;
   }
@@ -6291,6 +6362,8 @@ body::after {
   // sortent), puis écran d'ouverture avec un flash bref et la première carte.
   function proceedWithOpening(ed, index) {
     pullQueue = pickPack(ed.kind);
+    clearRecap();
+    computePullInfo();
     pullIndex = -1;
     packFinalized = false;
     tapHint.hidden = true;
@@ -6383,7 +6456,9 @@ body::after {
       });
       requestAnimationFrame(function () { fitCardMoves(el); });
     });
+    tapHint.textContent = tapHintDefault;
     tapHint.hidden = false;
+    showCardTag(pullIndex);
     // Dernière carte du paquet déjà affichée ici (pas seulement après un tap supplémentaire
     // dessus) : à la fois le bouton "Retour à l'album" ET l'ajout à l'inventaire doivent être
     // effectifs dès qu'on la voit, pas après avoir tapé une fois de plus dessus pour "valider"
@@ -6396,12 +6471,111 @@ body::after {
     }
   }
 
+  // ---- Fin de paquet : « Nouvelle carte » / doublon par carte, puis récap des cartes (ADR-0005) ----
+  // pullInfo est calculé AVANT que finalizePackIfDone() n'appelle addOwned() (qui incrémente les
+  // compteurs dès que la dernière carte est affichée) : c'est la seule photo fiable de « nouvelle
+  // ou doublon » pour ce tirage, y compris pour deux exemplaires de la même carte dans un paquet.
+  var pullInfo = [];
+  var tagEl = null, tagTimers = [], recapEl = null;
+  var tapHintDefault = tapHint.textContent;
+  var RECAP_HINT = "Toucher pour voir le récap du paquet";
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function computePullInfo() {
+    var seen = {};
+    pullInfo = pullQueue.map(function (c) {
+      var before = ownedCount(c.id) + (seen[c.id] || 0);
+      seen[c.id] = (seen[c.id] || 0) + 1;
+      return { isNew: before === 0 };
+    });
+  }
+  function later(fn, ms) { tagTimers.push(setTimeout(fn, ms)); }
+  function clearTag() {
+    tagTimers.forEach(clearTimeout); tagTimers = [];
+    if (tagEl) { tagEl.remove(); tagEl = null; }
+  }
+
+  // Pastille posée sur la carte révélée, après la fin du flip (plus tard pour la fumée des légendaires)
+  function showCardTag(i) {
+    clearTag();
+    var info = pullInfo[i], card = pullQueue[i];
+    if (!info || !info.isNew) return;   // seules les nouvelles cartes portent une pastille (rien pour un doublon)
+    var el = document.createElement("div");
+    el.className = "rv-tag is-new";
+    el.innerHTML = "<span>New</span>";
+    stage.appendChild(el);
+    tagEl = el;
+    later(function () {
+      el.classList.add("show");
+      try { if (navigator.vibrate) navigator.vibrate([10, 40, 16]); } catch (e) {}
+    }, reduceMotion ? 0 : (card.rarity === "legendaire" ? 1500 : 720));
+  }
+
+  // Récap : la dernière carte se fond, puis les cartes du paquet (de VRAIES cartes du jeu, via buildRevealCard,
+  // réduites) arrivent en cascade, chacune avec son badge NEW / ×n (le compteur de doublon roule).
+  function showRecap() {
+    if (recapEl) return;
+    clearTag();
+    tapHint.hidden = true;
+    opening.classList.add("recap-mode");
+    var tw = Math.round(Math.min(window.innerWidth * 0.28, 108));
+    var el = document.createElement("div");
+    el.className = "pk-recap";
+    el.style.setProperty("--tw", tw + "px");
+    el.style.setProperty("--sc", (tw / 300).toFixed(4));
+    el.innerHTML = '<div class="rcp-title">Paquet ouvert</div><div class="rcp-grid"></div>';
+    recapEl = el;
+    // les cartes sont construites une fois le récap dans le DOM : elles mesurent leur taille réelle (canvas, texte)
+    later(function () {
+      stage.style.display = "none";
+      opening.insertBefore(el, tapHint);
+      var x = document.createElement("button");
+      x.type = "button"; x.className = "rcp-x"; x.setAttribute("aria-label", "Quitter le récap et retourner à l'album"); x.textContent = "✕";
+      x.addEventListener("click", function () { closeBtn.click(); });
+      el.appendChild(x);
+      var grid = el.querySelector(".rcp-grid"), cards = [];
+      pullQueue.forEach(function (c, i) {
+        var info = pullInfo[i];
+        var tile = document.createElement("div");
+        tile.className = "rcp-tile";
+        tile.dataset.rarity = c.rarity;
+        tile.style.setProperty("--i", i);
+        tile.style.setProperty("--r", ((i % 2 ? 1 : -1) * (0.8 + (i % 3) * 0.7)).toFixed(1) + "deg");
+        var wrap = document.createElement("div");
+        wrap.className = "rcp-card";
+        var cardEl = buildRevealCard(c, function () {});
+        cardEl.style.transition = "none";
+        cardEl.classList.add("showing");
+        wrap.appendChild(cardEl);
+        tile.appendChild(wrap);
+        if (info.isNew) tile.insertAdjacentHTML("beforeend", '<span class="rcp-tag is-new">NEW</span>');
+        grid.appendChild(tile);
+        cards.push(cardEl);
+      });
+      requestAnimationFrame(function () {
+        cards.forEach(function (cardEl) {
+          if (window.applyMetallicss) cardEl.querySelectorAll(".metallicss").forEach(window.applyMetallicss);
+          fitCardMoves(cardEl);
+        });
+      });
+    }, reduceMotion ? 0 : 260);
+  }
+
+  function clearRecap() {
+    clearTag();
+    if (recapEl) { recapEl.remove(); recapEl = null; }
+    opening.classList.remove("recap-mode");
+    stage.style.display = "";
+    tapHint.textContent = tapHintDefault;
+  }
+
   var packFinalized = false;
 
   function finalizePackIfDone() {
     if (packFinalized) return;
     packFinalized = true;
-    tapHint.hidden = true;
+    // dernière carte : on garde le bouton « Retour à l'album » mais on invite à voir le récap
+    if (!recapEl) { tapHint.textContent = RECAP_HINT; tapHint.hidden = false; }
     closeBtn.hidden = false;
     // Chaque carte du paquet incrémente son compteur, même si elle était déjà possédée : un
     // tirage en double doit se voir dans la collection (badge "x2", "x3"...), pas disparaître.
@@ -6414,7 +6588,9 @@ body::after {
     pullIndex++;
     updateProgressDots();
     if (pullIndex >= pullQueue.length) {
+      pullIndex = pullQueue.length - 1;
       finalizePackIfDone();
+      showRecap();
       return;
     }
     revealCurrentCard("next");
@@ -7119,6 +7295,7 @@ body::after {
   }
 
   closeBtn.addEventListener("click", function () {
+    clearRecap();
     opening.hidden = true;
     resetPackTear(); // le paquet déchiré du carrousel redevient fermé pour la prochaine ouverture
     // "Retour à l'album" doit réellement y ramener, pas juste fermer l'ouverture : sans ça on
