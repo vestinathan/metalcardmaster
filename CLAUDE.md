@@ -10,8 +10,9 @@ metal. Projet 100% statique, déployé automatiquement sur Vercel à chaque push
   build step, pas de framework. C'est un choix délibéré pour la simplicité de déploiement,
   mais ça veut dire que le fichier est gros et que les diffs peuvent être bruyants — voir
   "Conventions de travail" ci-dessous.
-- **`images/bands/`** — photos/logos téléchargés une fois (TheAudioDB, repli Wikipedia),
-  stockés localement. Pas d'appel réseau au runtime.
+- **`images/bands/`** — logos (TheAudioDB, repli Wikipedia) et uniquement les photos sous licence libre
+  (Wikimedia Commons CC BY / CC BY-SA / domaine public, créditées dans Compte → Crédits photos). Les autres
+  cartes affichent une illustration générée à l'exécution (`genBandArt`). Pas d'appel réseau au runtime.
 - **`images/masks/`** — silhouettes PNG des musiciens (alpha), une par carte détourée ; servent aux
   effets holographiques des cartes ultra rares / légendaires. Voir ADR-0003.
 - **`images/packs/`** — packshots des paquets (bases réalistes en `.webp`), photo de la fenêtre et silhouette du
